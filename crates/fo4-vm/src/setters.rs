@@ -515,7 +515,7 @@ fn values(s: &VScript<'_>, store: &Store, plugin: usize, file: &str) -> Values {
 
 /// Where an argument of a call comes from, within its function.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Src {
+pub(crate) enum Src {
     SelfObj,
     /// A property of the script (by property name).
     Prop(String),
@@ -594,8 +594,19 @@ fn decl_type(lib: &MapLibrary, f: &Func, l: &Lit) -> Option<String> {
         .find_map(|s| s.variable(n).map(|v| v.type_name.clone()))
 }
 
+/// How deep [`trace`] follows a value through the receiver, array or
+/// struct of another instruction before it calls the chain too long.
+const MAX_TRACE_DEPTH: usize = 16;
+
 /// Follows an argument back within its function to where it comes from.
-fn trace(lib: &MapLibrary, f: &Func, at: usize, l: &Lit) -> Src {
+pub(crate) fn trace(lib: &MapLibrary, f: &Func, at: usize, l: &Lit) -> Src {
+    trace_depth(lib, f, at, l, 0)
+}
+
+fn trace_depth(lib: &MapLibrary, f: &Func, at: usize, l: &Lit, depth: usize) -> Src {
+    if depth > MAX_TRACE_DEPTH {
+        return Src::Other("a chain of copies too long");
+    }
     let mut name = match l {
         Lit::Int(n) => return Src::Int(*n),
         Lit::Ident(n) => n.clone(),
@@ -657,7 +668,7 @@ fn trace(lib: &MapLibrary, f: &Func, at: usize, l: &Lit) -> Src {
                     return Src::Other("the result of a call");
                 }
                 let recv = ins.args.get(1).cloned().unwrap_or(Lit::None);
-                return match trace(lib, f, k, &recv) {
+                return match trace_depth(lib, f, k, &recv, depth + 1) {
                     Src::SelfObj => Src::OwningQuest,
                     Src::Prop(p) => Src::OwningQuestOf(p),
                     _ => Src::Other("the owning quest of another object"),
@@ -666,7 +677,7 @@ fn trace(lib: &MapLibrary, f: &Func, at: usize, l: &Lit) -> Src {
             24 | 25 => return Src::Other("the result of a call"),
             32 => {
                 let arr = ins.args.get(1).cloned().unwrap_or(Lit::None);
-                return match trace(lib, f, k, &arr) {
+                return match trace_depth(lib, f, k, &arr, depth + 1) {
                     Src::Prop(p) => Src::Elem(p),
                     _ => Src::Other("an array element"),
                 };
@@ -676,7 +687,7 @@ fn trace(lib: &MapLibrary, f: &Func, at: usize, l: &Lit) -> Src {
                 let Some(m) = ins.args.get(2).and_then(ident) else {
                     return Src::Other("a struct member of an unknown name");
                 };
-                return match trace(lib, f, k, &base) {
+                return match trace_depth(lib, f, k, &base, depth + 1) {
                     b @ (Src::Param(_) | Src::Prop(_) | Src::Elem(_)) => {
                         Src::Member(Box::new(b), m.to_string())
                     }

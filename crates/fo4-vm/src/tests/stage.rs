@@ -788,3 +788,37 @@ fn every_new_rule_is_registered_pending() {
         assert!(rules::ALL.contains(&r), "{r}");
     }
 }
+
+#[test]
+fn a_long_chain_through_call_receivers_ends_without_deep_recursion() {
+    // q1 is the owning quest of q0, q2 of q1, and so on: each link used to
+    // be one more nested call of the scan, without a bound.
+    let n = 4000;
+    let mut src = String::from("script Deep extends Quest\n func F none\n");
+    for i in 0..=n {
+        src.push_str(&format!(" local Quest q{i}\n"));
+    }
+    src.push_str(" 23 GetOwningQuest self q0 0\n");
+    for i in 1..=n {
+        src.push_str(&format!(" 23 GetOwningQuest q{} q{i} 0\n", i - 1));
+    }
+    // A small stack: the old unbounded recursion overflows it.
+    let got = std::thread::Builder::new()
+        .stack_size(256 << 10)
+        .spawn(move || {
+            let script = assemble(&src);
+            let f = script.function("", "f").unwrap().clone();
+            let mut lib = MapLibrary::default();
+            lib.add(script);
+            let at = f.code.len();
+            let last = crate::program::Lit::Ident(format!("q{n}"));
+            format!("{:?}", setters::trace(&lib, &f, at, &last))
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+    assert_eq!(
+        got,
+        format!("{:?}", setters::Src::Other("the owning quest of another object"))
+    );
+}
