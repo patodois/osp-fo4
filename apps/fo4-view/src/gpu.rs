@@ -3596,6 +3596,17 @@ type CellInstance = (
     &'static mut Transform,
 );
 
+/// The cell's drawn instances the scripted play's per-frame work reads:
+/// not the camera, the cast, or a cell leaving ([`Leaving`]).
+#[cfg(feature = "script-event")]
+type PlayCellFilter = (Without<FlyCamera>, Without<CastEntity>, Without<Leaving>);
+
+/// The cast's drawn instances the scripted play's per-frame work reads.
+#[cfg(feature = "script-event")]
+type CastInstance = (Entity, &'static CastEntity, &'static mut Transform);
+#[cfg(feature = "script-event")]
+type PlayCastFilter = (Without<FlyCamera>, Without<Leaving>);
+
 /// Run seconds one frame may add to the scripted run's clock at most: a
 /// long frame (an upload) does not let the run pass far beyond what was
 /// drawn.
@@ -3620,8 +3631,8 @@ fn play_scripted(
     mut readout: ResMut<Readout>,
     pending: Option<Res<PendingScene>>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
-    mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>, Without<Leaving>)>,
-    mut casts: Query<(Entity, &CastEntity, &mut Transform), (Without<FlyCamera>, Without<Leaving>)>,
+    mut instances: Query<CellInstance, PlayCellFilter>,
+    mut casts: Query<CastInstance, PlayCastFilter>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
     (mut doors, mut leaves, mut skins, mut meshes): FollowParams,
     (mut exposure, lights, mut buffers): ExposureParams,
