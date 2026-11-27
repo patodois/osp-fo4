@@ -371,6 +371,28 @@ band, the pale ground sheet, the robot's object template. Measured, not fixed: t
 stored 11.5 units above the terrain, the only walking surface under it (the house's collision there lies lower); why it
 looks sunk into the drawn slab is not settled.
 
+Twenty-fifth-session fixes: the black viewport at the ride's cut into the lower shaft was the window's: once the
+loaded cell's scene spawned it replaced the drawn one at once, but the walker's new feet reach the window only when the
+run goes on, so for about ten frames the camera stood at the upper shaft's eye with the upper shaft already gone. The
+cell before a load of another space now stays drawn (its entities passed by the per-frame work) until the walker stands
+in the new cell, or two wall seconds (viewer policy, `gpu::leaving_done`). The exit door's green and orange oval was a
+heat-shimmer shape of the door's own model: a lighting shader setting Shader Flags 1 bit 15 (nifxml: Refraction), its
+texture set's first slot a tangent-space normal map drawn as a colour; `--draw-refraction-left-out`
+(`lighting_refraction_surface_left_out_v1`, pending, in the preset) leaves such shapes out. The two lace shapes below
+the front window were the doilies lying on the stereo cabinet, refused for its unread receiver field (RADR), its
+reference's location type (XLRT) and its glass, an untextured effect with an environment map:
+`--draw-activator-receiver` (`acti_receiver_location_render_unchanged_v1`, pending) and
+`--draw-effect-environment-left-out` (the existing `effect_environment_left_out_v1` and
+`effect_environment_adds_to_colour_v1`, now for untextured effects too), both in the preset, draw it. The cue says
+`ahead` only within 15 degrees of the heading, `ahead, bear left` or `bear right` to 45, and names a near aim apart from
+the way's length (`Go back: 503 units; first 47 ahead, bear right`). Measured, not changed: the two movement stops on the
+way to the second bridge are collision the data stores (a 58-unit coping on a stone retaining wall beside a walkable
+top, met by the 16-unit capsule 15 units off the line walked; a concrete park table's 31 to 47-unit top and bench).
+Measurement aids: `FO4_VIEW_HOLD_SHOTS=SECONDS` writes frames while the scripted window's scene is not ready and for a
+second after each load, the frame log has the camera's height, `FO4_VIEW_BLENDED_ALL` and `FO4_VIEW_BLENDED_MIN` widen
+the draw dump. Left: the exit device's four pieces, the television, heels on slopes, actors as pick targets in a
+window replay, the throat band, the pale ground sheet, the robot's template (janela20 RESULTADO).
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
