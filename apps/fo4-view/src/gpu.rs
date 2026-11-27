@@ -1337,7 +1337,10 @@ fn spawn_window_scene(world: &mut World) {
             .get_resource_mut::<Playing>()
             .map(|mut p| {
                 let old = std::mem::take(&mut p.2.old);
-                if p.2.leaving_for.is_some() {
+                if let Some((_, since)) = p.2.leaving_for.as_mut() {
+                    // The wait counts from the new cell's spawn, not from
+                    // the load's return (its cast and upload come first).
+                    *since = std::time::Instant::now();
                     p.2.leaving.extend(old);
                     Vec::new()
                 } else {
@@ -2115,7 +2118,7 @@ struct PlayDrawn {
     /// drawn after the new cell spawns until the walker stands in that
     /// cell (`spawn_window_scene` moves them here from `old`;
     /// [`play_scripted`] despawns them), with the loaded cell and since
-    /// when: the walker's new feet reach the window only once the run goes
+    /// when (the load's return, then the new cell's spawn): the walker's new feet reach the window only once the run goes
     /// on, so until then the camera stands at the old eye.
     leaving: Vec<Entity>,
     leaving_for: Option<(fo4_plugin::FormKey, std::time::Instant)>,
@@ -3735,7 +3738,7 @@ fn play_scripted(
             && leaving_done(seen.cell.as_ref(), cell, since.elapsed().as_secs_f64())
         {
             println!(
-                "play: the cell before despawned at {:.3} s of the run, {:.2} s after the load returned ({} entities; the walker {})",
+                "play: the cell before despawned at {:.3} s of the run, {:.2} s after the new cell spawned ({} entities; the walker {})",
                 seen.t,
                 since.elapsed().as_secs_f64(),
                 drawn.leaving.len(),
