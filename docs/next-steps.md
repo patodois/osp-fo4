@@ -393,6 +393,23 @@ second after each load, the frame log has the camera's height, `FO4_VIEW_BLENDED
 the draw dump. Left: the exit device's four pieces, the television, heels on slopes, actors as pick targets in a
 window replay, the throat band, the pale ground sheet, the robot's template (janela20 RESULTADO).
 
+Twenty-sixth-session fixes: the rock at the end of the ride down had two sources. In the ride's last 1.7 s the terrain
+over the shaft touched the riding walker's capsule and pushed it 177 units sideways (a temporary trace of the 25th
+session's second record; no key held); `ride_check` had named the reading long ago and the play mode had not read it:
+`--play-elevator-through-terrain` (`walk_ride_rider_passes_terrain_v1`, in the preset) now hides the terrain from a
+rider, the record's stages unchanged. But the rock filling the view from about 6 s before the cut is the drawn terrain
+itself: the data's terrain stands inside the shaft (under the deck's centre at about 5250, the ride ending about 425
+lower, and 50 units east of the centre already rising steeply), and the eye goes down through it; nothing read holes
+it (XCLC quad bits clear). Not fixed: the drawing needs a reading
+of its own (the terrain within the ride's horizontal box left out while the walker rides, a pending rule). The
+living room's stereo cabinet could be walked through: its model stores collision, refused at collision readiness by
+the activator's unread PNAM, FNAM and RADR and the reference's XLRT; `--play-collision-activator-fields`
+(`acti_fields_receiver_collision_unchanged_v1`, in the preset) sets them aside for collision as the drawing already
+did. The 300-unit fall beyond the second bridge is the data's: the walker left the top of the large bridge structure
+at its edge, the terrain 300 below (column probe). Left: the undrawn pods and a cue to the one the run waits on, the
+road walk beyond the second bridge, the holds, the nursery prompt, the ten creatures, the exit device, the
+television, heels, the throat band, the robot, the actor prompt's name (janela21 RESULTADO).
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
