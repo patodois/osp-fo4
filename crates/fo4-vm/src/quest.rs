@@ -2178,10 +2178,14 @@ impl QuestHost<'_> {
                 out
             }
         };
-        w.quests
-            .state(i)
-            .collections
-            .insert(id, Some(items.clone()));
+        // The rows are kept once read while the quest runs; the empty answer
+        // of a quest not running is not, so that it fills when it starts.
+        if running == Some(true) {
+            w.quests
+                .state(i)
+                .collections
+                .insert(id, Some(items.clone()));
+        }
         Ok(items)
     }
     /// The collection natives (`quest_collection_alias_location_refs_v1`),

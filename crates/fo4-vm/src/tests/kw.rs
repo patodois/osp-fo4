@@ -357,6 +357,33 @@ fn a_collection_alias_holds_its_locations_distinct_rows_only_under_its_rule() {
 }
 
 #[test]
+fn a_collection_read_before_its_quest_runs_fills_once_it_runs() {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = super::quest::library();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    vm.world.quests.scenario = quest::Scenario::NewGame;
+    vm.world.quests.collection_fills = true;
+    let i = quest::QuestInfo::load(&s, &key(QS), &b).unwrap().unwrap();
+    let alias = vm.world.keyed_object(
+        "alias",
+        &format!("{}#alias:0", crate::bind::record_key(&key(QS))),
+        "refcollectionalias",
+    );
+    let count = |vm: &mut Vm<'_>| {
+        let mut x = call("refcollectionalias", "getcount", alias, vec![]);
+        x.return_type = "int".into();
+        vm.host.call(&x, &mut vm.world)
+    };
+    vm.world.quests.state(&i).running = Some(false);
+    assert!(matches!(count(&mut vm), Reply::Value(Val::Int(0))));
+    // The quest starts: the empty answer was not kept.
+    vm.world.quests.state(&i).running = Some(true);
+    assert!(matches!(count(&mut vm), Reply::Value(Val::Int(2))));
+}
+
+#[test]
 fn the_callers_registration_answer_applies_only_to_made_registrations() {
     let s = store();
     let mut l = super::quest::library();
