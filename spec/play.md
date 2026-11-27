@@ -1068,6 +1068,33 @@ play preset's run arguments or play options), and three are the game's own waits
   collision box where it stands is left out of the window's drawing (`fo4-view`'s `scene::ride_cut` and
   `scene::terrain_kept`); the terrain is whole again once the walker stands on no moving part. The run, the walking
   world and the headless frames are unchanged.
+- **The cryo aisle's empty bays** (the 25th session's second record; round 27). All thirteen pods of the aisle (twelve
+  of one furniture base, the player's of another) were refused at render readiness, the preset's furniture switches
+  on. Their record blockers besides the fields `--draw-furniture-fields` sets aside: OBTE (a 32-bit count of 1), OBTS
+  (one 18-byte object template entry whose include and property counts are zero, closed by an empty STOP: it names no
+  part to add) and, on the player's base, ATTX (a 4-byte localized string: text). `--draw-furniture-template`
+  (`furn_template_text_render_unchanged_v1`) sets them aside for the drawing. Their model blockers (particle systems
+  and their controllers, the door sequences, a behaviour graph's extra data, blocks the reader does not decode) are
+  left to `--draw-furniture-parts` (`furn_unmoved_parts_drawn_v1`, now in the preset), whose reading leaves out every
+  shape a controller or sequence can drive: on the twelve pods of one base the door sequences reach every shape, none
+  was kept and they stayed refused. `--draw-furniture-at-rest` (`furn_parts_drawn_at_rest_v1`, with it) reads a
+  furniture's parts at rest: the driven shapes drawn at their stored transforms, as the rest rules draw an idle
+  manager's model; the particle systems and the shapes reading an open blocker still left out.
+- **The objective that points at the player's pod is never shown** (the 25th session's second record; round 27,
+  explained, nothing changed). The quest's stage fragments, in the game's order: stage 630 shows objective 130, 680
+  completes it and shows 140, 700 completes 140 and shows 145, and 710 (the end of the comfort scene) completes 145
+  and shows 150, whose target is the player's pod's alias, only when stage 720 (the player using the pod) is not done.
+  In every recorded session 710 comes only from the pod's own activation handler, which sets 720 first, so 150 is
+  completed and never shown. In the second record of the 25th session the chain stopped much earlier: the quest's
+  stage 410 was never set (the person entered the broadcast trigger only before its prerequisite stage 400, set at
+  685 s, and the default trigger script sets its stage only on an entry made after the prerequisite), so the hill
+  quest's stage 10 and its stage 500 never came, the marker those stages disable stayed enabled, and the five
+  neighbours that ride the elevator, children of that marker with the opposite-state flag, stayed disabled: in the
+  vault their MoveTo does not load them (`world_load_reference_enters_v1` loads only an enabled reference, a temporary
+  trace of the run's loads showed it), their OnLoad handlers never register the animation events the caller's
+  timed actions wait on, stages 644 to 646 never come, and the caller's activation of the suit giver, gated on 646,
+  never runs. That is the data and the person's path under the rules the run already reads, not a fault found in
+  the run; no cue was written this round.
 - **Walking through the checkpoint gate 7.5 s early.** The person crossed the two stage triggers past the gate before
   the guard's talk set their prerequisite, and the default trigger script sets its stage only on an entry made after
   the prerequisite: the escort's later phases wait for them forever. The data says the game would not let the person
@@ -2226,8 +2253,8 @@ at the checkpoint stood 19 units above the terrain on a slope; with the switch s
 `--draw-furniture-parts` (`furn_unmoved_parts_drawn_v1`, pending, off by default and not in the preset, with
 `--draw-static-parts`) reads a furniture refused for its model's animation as `--draw-static-parts` reads a static:
 drawn by the shapes no controller reaches (`Loader::set_render_furniture_parts`). On the vault exit's device it draws
-nothing: the placement stays refused with the switch (the twenty-first round's window replay), so the switch is left
-out of the preset.
+nothing: the placement stays refused with the switch (the twenty-first round's window replay), so the switch was
+left out of the preset until round 27 (below).
 
 **The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
 thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up

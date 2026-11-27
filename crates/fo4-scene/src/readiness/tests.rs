@@ -472,6 +472,36 @@ fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
         "UninterpretedVisualSubrecord",
         "FURN.MODT.layout_not_established"
     )));
+    // The object template and activate text: unread, or the count read as
+    // run-time state; on a furniture only, and not the fields above.
+    for (code, found) in [
+        (
+            "UninterpretedVisualSubrecord",
+            "FURN.OBTS.layout_not_established",
+        ),
+        (
+            "UninterpretedVisualSubrecord",
+            "FURN.ATTX.layout_not_established",
+        ),
+        ("RuntimeRecordState", "FURN.OBTE"),
+    ] {
+        assert!(furniture_template_field(&e(code, found)), "{found}");
+        assert!(!furniture_field(&e(code, found)), "{found}");
+        assert!(!furniture_template_field(&e(
+            code,
+            &found.replace("FURN", "ACTI")
+        )));
+    }
+    assert!(!furniture_template_field(&e(
+        "UnsupportedUsedFieldLayout",
+        "FURN.OBTS.x"
+    )));
+    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT", "MODT"] {
+        assert!(!furniture_template_field(&e(
+            "UninterpretedVisualSubrecord",
+            &format!("FURN.{f}.layout_not_established")
+        )));
+    }
     assert!(!furniture_field(&e(
         "UnsupportedUsedFieldLayout",
         "FURN.FNAM.x"

@@ -3013,6 +3013,71 @@ fn a_furniture_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_it
         on.left_out,
         vec![(on.instances[0].index, "UnsupportedNifBlock".to_string())]
     );
+    // At rest (`furn_parts_drawn_at_rest_v1`): read under its own rule, the
+    // same shape drawn (nothing here is driven).
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    loader.set_render_static_parts(true);
+    loader.set_render_furniture_parts(true);
+    loader.set_render_furniture_at_rest(true);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let h = scene.instances[0].state.hypotheses();
+    assert!(h.contains(&fo4_scene::hypotheses::FURNITURE_AT_REST) && !h.contains(&FURNITURE_PARTS));
+    let rest = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert!(rest.omitted.is_empty(), "{:?}", rest.omitted);
+    assert_eq!(rest.list.draws.len(), on.list.draws.len());
+    assert_eq!(rest.left_out, on.left_out);
+}
+
+/// `furn_template_text_render_unchanged_v1`: a furniture storing an object
+/// template (OBTE, OBTS) and an activate text (ATTX) is refused for them;
+/// behind `Loader::set_render_furniture_template` it is drawn.
+#[test]
+fn a_furniture_refused_for_its_template_and_text_is_drawn_behind_its_switch() {
+    use fo4_scene::hypotheses::FURNITURE_TEMPLATE_RENDER;
+    let part = nif_file(
+        model_blocks(b"textures/a.dds", None, None, (b"", b""), None),
+        b"PlainLabel",
+        b"",
+    );
+    let mut fields = sub(b"MODL", b"part.nif\0");
+    fields.extend(sub(b"ATTX", &7u32.to_le_bytes()));
+    fields.extend(sub(b"OBTE", &1u32.to_le_bytes()));
+    let mut entry = vec![0u8; 18];
+    entry[12] = 0xff;
+    entry[13] = 0xff;
+    fields.extend(sub(b"OBTS", &entry));
+    fields.extend(sub(b"STOP", b""));
+    let furniture = rec(b"FURN", 0x804, 0, &fields);
+    let (_temp, m) = fixture_records(
+        "render-furniture-template",
+        &dds(),
+        part,
+        0x804,
+        &[],
+        &furniture,
+    );
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let off = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b)
+        .by_editor_id("SyntheticScolCell", &b)
+        .unwrap();
+    assert!(matches!(off.instances[0].state, fo4_scene::State::Blocked));
+    let found: Vec<&str> = off.instances[0]
+        .blockers
+        .iter()
+        .map(|e| e.found.as_str())
+        .collect();
+    for f in ["FURN.OBTE", "FURN.OBTS", "FURN.ATTX"] {
+        assert!(found.iter().any(|x| x.starts_with(f)), "{f}: {found:?}");
+    }
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+    loader.set_render_furniture_template(true);
+    let on = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    assert!(on.instances[0]
+        .state
+        .hypotheses()
+        .contains(&FURNITURE_TEMPLATE_RENDER));
 }
 
 /// `Assets::keep_files` (a caller's policy, the play window's loads): a

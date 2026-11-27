@@ -552,6 +552,11 @@ pub struct Drawing {
     /// loader's render readiness sets a furniture's unread `PNAM`, `FNAM`,
     /// `MNAM`, `SNAM` and `WBDT` aside (`Loader::set_render_furniture_fields`).
     pub furniture_fields: bool,
+    /// `--draw-furniture-template` (`furn_template_text_render_unchanged_v1`):
+    /// the loader's render readiness sets a furniture's object template
+    /// (`OBTE`, `OBTS`) and activate text (`ATTX`) aside
+    /// (`Loader::set_render_furniture_template`).
+    pub furniture_template: bool,
     /// `--draw-world-persistent` (`world_persistent_refs_drawn_in_square_v1`;
     /// with `--around`): the worldspace's persistent references standing in
     /// a loaded grid square join that square's scene
@@ -566,6 +571,11 @@ pub struct Drawing {
     /// rule settles is drawn by its unmoved parts
     /// (`Loader::set_render_furniture_parts`).
     pub furniture_parts: bool,
+    /// `--draw-furniture-at-rest` (`furn_parts_drawn_at_rest_v1`; with
+    /// `--draw-furniture-parts`): a furniture read by its parts keeps the
+    /// shapes a controller can drive, at their stored transforms
+    /// (`Loader::set_render_furniture_at_rest`).
+    pub furniture_at_rest: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -1126,9 +1136,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-activator-fields" => drawing.activator_fields = true,
             "--draw-activator-receiver" => drawing.activator_receiver = true,
             "--draw-furniture-fields" => drawing.furniture_fields = true,
+            "--draw-furniture-template" => drawing.furniture_template = true,
             "--draw-world-persistent" => drawing.world_persistent = true,
             "--draw-activator-parts" => drawing.activator_parts = true,
             "--draw-furniture-parts" => drawing.furniture_parts = true,
+            "--draw-furniture-at-rest" => drawing.furniture_at_rest = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
@@ -1533,6 +1545,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_on_platforms && !(scene.drawing.platforms && scene.play_cast.is_some()) {
         return Err("--draw-cast-on-platforms stands the play cast on the platforms --draw-platforms draws: it needs --draw-platforms and --timeline-cast".into());
+    }
+    if scene.drawing.furniture_at_rest && !scene.drawing.furniture_parts {
+        return Err("--draw-furniture-at-rest reads a furniture as --draw-furniture-parts does, at rest: it needs --draw-furniture-parts".into());
     }
     if scene.drawing.furniture_parts && !scene.drawing.static_parts {
         return Err("--draw-furniture-parts reads a furniture as --draw-static-parts reads a static: it needs --draw-static-parts".into());

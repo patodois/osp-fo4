@@ -877,6 +877,12 @@ pub fn cell<'s>(
     if drawing.furniture_fields {
         loader.set_render_furniture_fields(true);
     }
+    // `--draw-furniture-template` (off by default): render readiness sets a
+    // furniture's object template and activate text aside
+    // (`furn_template_text_render_unchanged_v1`).
+    if drawing.furniture_template {
+        loader.set_render_furniture_template(true);
+    }
     // `--draw-static-parts` (off by default): render readiness sets aside
     // a static's model blockers no rule covers when a shape of its model
     // stays, the draw leaving out the rest (`static_unmoved_parts_drawn_v1`).
@@ -894,6 +900,9 @@ pub fn cell<'s>(
     // (`furn_unmoved_parts_drawn_v1`).
     if drawing.furniture_parts {
         loader.set_render_furniture_parts(true);
+        // `--draw-furniture-at-rest` (`furn_parts_drawn_at_rest_v1`): the
+        // shapes a controller can drive kept at their stored transforms.
+        loader.set_render_furniture_at_rest(drawing.furniture_at_rest);
     }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
@@ -1332,6 +1341,21 @@ pub fn cell<'s>(
         println!(
             "furniture: {n} placements ready with their unread fields set aside ({})",
             fo4_scene::hypotheses::FURNITURE_FIELDS_RENDER
+        );
+    }
+    if drawing.furniture_template {
+        let n = scene
+            .instances
+            .iter()
+            .filter(|i| {
+                i.state
+                    .hypotheses()
+                    .contains(&fo4_scene::hypotheses::FURNITURE_TEMPLATE_RENDER)
+            })
+            .count();
+        println!(
+            "furniture: {n} placements ready with their object template and activate text set aside ({})",
+            fo4_scene::hypotheses::FURNITURE_TEMPLATE_RENDER
         );
     }
     steps.mark("draw list");

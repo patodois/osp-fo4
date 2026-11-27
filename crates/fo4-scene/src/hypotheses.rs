@@ -272,6 +272,10 @@ pub const LIGHTING_REFRACTION_LEFT_OUT: &str = "lighting_refraction_surface_left
 /// leave its drawing as its model stores it
 /// (`Loader::set_render_furniture_fields`, off by default).
 pub const FURNITURE_FIELDS_RENDER: &str = "furn_fields_render_unchanged_v1";
+/// A furniture's (`FURN`) object template (`OBTE`, `OBTS`) and activate
+/// text (`ATTX`) leave its drawing as its model stores it
+/// (`Loader::set_render_furniture_template`, off by default).
+pub const FURNITURE_TEMPLATE_RENDER: &str = "furn_template_text_render_unchanged_v1";
 /// A worldspace's persistent references whose stored position lies in a
 /// loaded grid square join that square's scene (`grid::persistent_in`,
 /// the viewer's `--draw-world-persistent`, off by default).
@@ -308,6 +312,12 @@ pub const ACTIVATOR_PARTS: &str = "acti_unmoved_parts_drawn_v1";
 /// (`Loader::set_render_furniture_parts`, with
 /// `Loader::set_render_static_parts`; off by default).
 pub const FURNITURE_PARTS: &str = "furn_unmoved_parts_drawn_v1";
+/// A furniture (`FURN`) placement refused for model blocks no rule
+/// settles is drawn at rest: as `FURNITURE_PARTS` draws it, but the shapes
+/// a controller can drive kept at their stored transforms
+/// (`crate::parts::read_with`; `Loader::set_render_furniture_at_rest`, with
+/// `Loader::set_render_furniture_parts`; off by default).
+pub const FURNITURE_AT_REST: &str = "furn_parts_drawn_at_rest_v1";
 /// A skinned placement whose reference stores a ragdoll pose (`XRGD`) is
 /// left out of the skinned own-nodes reading
 /// (`timeline::ride::add_skinned_with`, `--skinned-models-ragdoll-left-out`).
@@ -824,8 +834,10 @@ mod tests {
             ACTIVATOR_RECEIVER_RENDER,
             LIGHTING_REFRACTION_LEFT_OUT,
             FURNITURE_FIELDS_RENDER,
+            FURNITURE_TEMPLATE_RENDER,
             ACTIVATOR_PARTS,
             FURNITURE_PARTS,
+            FURNITURE_AT_REST,
             RAGDOLL_LEFT_OUT,
             WORLD_PERSISTENT_IN_SQUARE,
             STATIC_REFERENCE_FIELDS_COLLISION,

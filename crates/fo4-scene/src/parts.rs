@@ -187,6 +187,16 @@ fn movers(n: &Nif<'_>) -> Movers {
 /// others are left to their rules): which shapes the draw leaves out, and
 /// how many it keeps.
 pub fn read(n: &Nif<'_>, blockers: &[Error], b: &Budget) -> Result<Parts> {
+    read_with(n, blockers, false, b)
+}
+
+/// [`read`] at rest (`furn_parts_drawn_at_rest_v1`,
+/// [`hypotheses::FURNITURE_AT_REST`]): with `at_rest`, a shape a controller
+/// or controller sequence can drive is kept, drawn as the model stores it
+/// (no controller is run, [`MOVED`] is not used); the particle systems and
+/// the shapes reading a block an [`open`] blocker lies on are still left
+/// out. Without it, [`read`].
+pub fn read_with(n: &Nif<'_>, blockers: &[Error], at_rest: bool, b: &Budget) -> Result<Parts> {
     let mut on: BTreeMap<usize, &str> = BTreeMap::new();
     for e in blockers.iter().filter(|e| open(e)) {
         let offset = e.source.offset;
@@ -242,10 +252,11 @@ pub fn read(n: &Nif<'_>, blockers: &[Error], b: &Budget) -> Result<Parts> {
         let named = |k: usize| {
             name_of(n, k).is_some_and(|x| !x.is_empty() && movers.names.iter().any(|y| y == x))
         };
-        let moved = movers.unknown
-            || reads.iter().any(|k| state(*k))
-            || all().any(|k| movers.targets.contains(&k))
-            || chain.iter().chain([&i]).any(|k| named(*k));
+        let moved = !at_rest
+            && (movers.unknown
+                || reads.iter().any(|k| state(*k))
+                || all().any(|k| movers.targets.contains(&k))
+                || chain.iter().chain([&i]).any(|k| named(*k)));
         if moved {
             parts.left.insert(i, MOVED.into());
             continue;

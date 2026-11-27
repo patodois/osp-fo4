@@ -550,6 +550,9 @@ struct Builder<'a, 's> {
     /// and material-blended shapes are left out ([`Build::left_out`]), and
     /// so is a shape the draw refuses.
     static_parts: bool,
+    /// `furn_parts_drawn_at_rest_v1`: the parts read at rest
+    /// (`fo4_scene::parts::read_with`).
+    parts_at_rest: bool,
     /// Under [`Builder::static_parts`], the parts of the model being drawn.
     parts: Option<fo4_scene::parts::Parts>,
 }
@@ -2283,7 +2286,12 @@ impl Builder<'_, '_> {
                     // its own blockers.
                     self.parts = if self.static_parts {
                         let blockers = &loader.assets.nodes[*id].blockers;
-                        Some(fo4_scene::parts::read(&n, blockers, self.budget)?)
+                        Some(fo4_scene::parts::read_with(
+                            &n,
+                            blockers,
+                            self.parts_at_rest,
+                            self.budget,
+                        )?)
                     } else {
                         None
                     };
@@ -2634,7 +2642,9 @@ impl Builder<'_, '_> {
         self.platform = rules.contains(&h::PLAY_PLATFORM_LEFT_OUT);
         self.static_parts = rules.contains(&h::STATIC_PARTS)
             || rules.contains(&h::ACTIVATOR_PARTS)
-            || rules.contains(&h::FURNITURE_PARTS);
+            || rules.contains(&h::FURNITURE_PARTS)
+            || rules.contains(&h::FURNITURE_AT_REST);
+        self.parts_at_rest = rules.contains(&h::FURNITURE_AT_REST);
     }
     /// Under [`Builder::platform`]: whether `e`, raised drawing one shape
     /// or block, is left out (an allocation, limit or arithmetic failure
@@ -3236,6 +3246,7 @@ fn build_inner(
         platform: false,
         node_chains: BTreeMap::new(),
         static_parts: false,
+        parts_at_rest: false,
         parts: None,
     };
     let scratch = b.child();
@@ -3319,7 +3330,12 @@ fn build_inner(
             h.contains(&fo4_scene::hypotheses::STATIC_PARTS)
                 || h.contains(&fo4_scene::hypotheses::ACTIVATOR_PARTS)
                 || h.contains(&fo4_scene::hypotheses::FURNITURE_PARTS)
+                || h.contains(&fo4_scene::hypotheses::FURNITURE_AT_REST)
         };
+        builder.parts_at_rest = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::FURNITURE_AT_REST);
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;

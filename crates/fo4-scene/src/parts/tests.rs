@@ -149,6 +149,30 @@ fn an_undecoded_controller_leaves_every_shape_out() {
 }
 
 #[test]
+fn at_rest_the_driven_shapes_stay_and_particles_and_open_blockers_do_not() {
+    let b = Budget::new(1 << 20);
+    let blockers = [blocker("UnsupportedNifBlock", 510, "BSPositionData")];
+    // The node a controller drives and the node a sequence names keep their
+    // shapes at rest; the particle system and the shape reading the open
+    // blocker are still left out.
+    let p = read_with(&model(false), &blockers, true, &b).unwrap();
+    assert_eq!(p.kept, 3, "{p:?}");
+    assert_eq!(p.left_out(1), None);
+    assert_eq!(p.left_out(7), None);
+    assert_eq!(p.left_out(12), None);
+    assert_eq!(p.left_out(4), Some("UnsupportedNifBlock"));
+    assert_eq!(p.left_out(8), Some(PARTICLE));
+    // An undecoded controller leaves nothing out at rest.
+    let p = read_with(&model(true), &[], true, &b).unwrap();
+    assert_eq!((p.kept, p.left.len()), (4, 1), "{p:?}");
+    // Not at rest: as read.
+    assert_eq!(
+        read_with(&model(false), &blockers, false, &b).unwrap(),
+        read(&model(false), &blockers, &b).unwrap()
+    );
+}
+
+#[test]
 fn only_open_model_blockers_are_set_aside() {
     use readiness::Origin;
     let unread = blocker("UnsupportedNifBlock", 0, "BSPositionData");

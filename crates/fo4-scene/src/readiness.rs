@@ -375,6 +375,24 @@ pub fn furniture_field(e: &Error) -> bool {
         && parts.next().is_some_and(|f| FURNITURE_FIELDS.contains(&f))
 }
 
+/// A furniture base's (`FURN`) object template and activate text
+/// subrecords, set aside for drawing under
+/// `furn_template_text_render_unchanged_v1` (xEdit's published names:
+/// object template count, object template entry, activate text override).
+pub const FURNITURE_TEMPLATE_FIELDS: [&str; 3] = ["OBTE", "OBTS", "ATTX"];
+
+/// Whether `e` is the record blocker of a furniture's (`FURN`)
+/// [`FURNITURE_TEMPLATE_FIELDS`]: unread (`OBTS`, `ATTX`) or read as
+/// run-time state (`OBTE`).
+pub fn furniture_template_field(e: &Error) -> bool {
+    let mut parts = e.found.split('.');
+    (e.code == Code::UninterpretedVisualSubrecord.name() || e.code == "RuntimeRecordState")
+        && parts.next() == Some("FURN")
+        && parts
+            .next()
+            .is_some_and(|f| FURNITURE_TEMPLATE_FIELDS.contains(&f))
+}
+
 /// Whether `e` is a furniture reference's run-time field set aside with
 /// [`furniture_field`]: its `XLRT` or `XIS2` (xEdit's published names:
 /// location ref type, ignored by sandbox), read as run-time state.

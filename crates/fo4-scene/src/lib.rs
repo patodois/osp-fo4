@@ -206,9 +206,11 @@ pub struct Loader<'a> {
     render_activator_fields: bool,
     render_activator_receiver: bool,
     render_furniture_fields: bool,
+    render_furniture_template: bool,
     render_static_parts: bool,
     render_activator_parts: bool,
     render_furniture_parts: bool,
+    render_furniture_at_rest: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -317,6 +319,16 @@ impl<'a> Loader<'a> {
     pub fn render_furniture_fields(&self) -> bool {
         self.render_furniture_fields
     }
+    /// `furn_template_text_render_unchanged_v1`
+    /// ([`hypotheses::FURNITURE_TEMPLATE_RENDER`]): render readiness sets a
+    /// furniture's (`FURN`) [`readiness::FURNITURE_TEMPLATE_FIELDS`] aside,
+    /// for drawing only (off by default; collision readiness unchanged).
+    pub fn set_render_furniture_template(&mut self, on: bool) {
+        self.render_furniture_template = on;
+    }
+    pub fn render_furniture_template(&self) -> bool {
+        self.render_furniture_template
+    }
     /// `acti_unmoved_parts_drawn_v1` ([`hypotheses::ACTIVATOR_PARTS`]; with
     /// [`Loader::set_render_static_parts`]): render readiness reads an
     /// activator (`ACTI`) refused for model blocks no rule settles as the
@@ -337,6 +349,16 @@ impl<'a> Loader<'a> {
     }
     pub fn render_furniture_parts(&self) -> bool {
         self.render_furniture_parts
+    }
+    /// `furn_parts_drawn_at_rest_v1` ([`hypotheses::FURNITURE_AT_REST`];
+    /// with [`Loader::set_render_furniture_parts`]): a furniture is read by
+    /// [`parts::read_with`] at rest, the shapes a controller can drive kept
+    /// at their stored transforms (off by default).
+    pub fn set_render_furniture_at_rest(&mut self, on: bool) {
+        self.render_furniture_at_rest = on;
+    }
+    pub fn render_furniture_at_rest(&self) -> bool {
+        self.render_furniture_at_rest
     }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
@@ -393,8 +415,10 @@ impl<'a> Loader<'a> {
             render_activator_fields: false,
             render_activator_receiver: false,
             render_furniture_fields: false,
+            render_furniture_template: false,
             render_activator_parts: false,
             render_furniture_parts: false,
+            render_furniture_at_rest: false,
             render_static_parts: false,
         }
     }
@@ -816,6 +840,10 @@ impl<'a> Loader<'a> {
             && base
                 .as_ref()
                 .is_some_and(|v| v.record.signature == *b"FURN");
+        let template = self.render_furniture_template
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"FURN");
         let on_activator = self.render_activator_parts
             && base
                 .as_ref()
@@ -830,7 +858,11 @@ impl<'a> Loader<'a> {
                 .iter()
                 .enumerate()
                 .any(|(k, e)| parts::aside(e, origin(k)))
-            && self.static_parts_kept(base.as_ref(), b)?;
+            && self.static_parts_kept(
+                base.as_ref(),
+                on_furniture && self.render_furniture_at_rest,
+                b,
+            )?;
         let state = if agrees
             || fields
             || leaf
@@ -840,6 +872,7 @@ impl<'a> Loader<'a> {
             || activator
             || receiver
             || furniture
+            || template
         {
             hypotheses::classify_aside(
                 &blockers,
@@ -882,6 +915,11 @@ impl<'a> Loader<'a> {
                             || readiness::furniture_reference_field(e))
                     {
                         Some(hypotheses::FURNITURE_FIELDS_RENDER)
+                    } else if template
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::furniture_template_field(e)
+                    {
+                        Some(hypotheses::FURNITURE_TEMPLATE_RENDER)
                     } else if parts
                         && on_activator
                         && (parts::aside(e, origin(k))
@@ -890,7 +928,11 @@ impl<'a> Loader<'a> {
                     {
                         Some(hypotheses::ACTIVATOR_PARTS)
                     } else if parts && on_furniture && parts::aside(e, origin(k)) {
-                        Some(hypotheses::FURNITURE_PARTS)
+                        Some(if self.render_furniture_at_rest {
+                            hypotheses::FURNITURE_AT_REST
+                        } else {
+                            hypotheses::FURNITURE_PARTS
+                        })
                     } else if parts && parts::aside(e, origin(k)) {
                         Some(hypotheses::STATIC_PARTS)
                     } else {
@@ -940,8 +982,26 @@ impl<'a> Loader<'a> {
     }
     /// Whether a base with one asset, a model, keeps at least one shape
     /// under [`parts::read`] given that model's own blockers.
-    fn static_parts_kept(&self, base: Option<&Base>, b: &Budget) -> Result<bool> {
-        let Some(&[asset]) = base.map(|v| v.assets.as_slice()) else {
+    /// With `at_rest` (`furn_parts_drawn_at_rest_v1`) the base's one model
+    /// among its assets is read, the materials of its own material swap
+    /// beside it, and read at rest ([`parts::read_with`]).
+    fn static_parts_kept(&self, base: Option<&Base>, at_rest: bool, b: &Budget) -> Result<bool> {
+        let assets = base.map_or(&[][..], |v| v.assets.as_slice());
+        let model = if at_rest {
+            let mut models = assets
+                .iter()
+                .filter(|a| self.assets.nodes.get(**a).map(|n| n.kind) == Some(AssetKind::Model));
+            match (models.next(), models.next()) {
+                (Some(m), None) => Some(*m),
+                _ => None,
+            }
+        } else {
+            match assets {
+                [asset] => Some(*asset),
+                _ => None,
+            }
+        };
+        let Some(asset) = model else {
             return Ok(false);
         };
         let Some(node) = self.assets.nodes.get(asset) else {
@@ -952,7 +1012,9 @@ impl<'a> Loader<'a> {
         }
         let scope = b.child();
         self.assets.with_decoded(asset, &scope, |d| match d {
-            DecodedAsset::Model(n) => Ok(parts::read(&n, &node.blockers, &scope)?.kept > 0),
+            DecodedAsset::Model(n) => {
+                Ok(parts::read_with(&n, &node.blockers, at_rest, &scope)?.kept > 0)
+            }
             _ => Ok(false),
         })
     }

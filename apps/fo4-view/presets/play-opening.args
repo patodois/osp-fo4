@@ -183,6 +183,10 @@
 # drawn as its model stores it (furn_fields_render_unchanged_v1): the
 # house's beds, chairs and sofa.
 --draw-furniture-fields
+# A furniture whose object template (one entry naming no part) or activate
+# text kept it out is drawn as its model stores it
+# (furn_template_text_render_unchanged_v1): the vault's cryo pods.
+--draw-furniture-template
 # The worldspace's persistent references standing in a loaded grid square
 # join it (world_persistent_refs_drawn_in_square_v1): the nursery's crib.
 --draw-world-persistent
@@ -196,6 +200,13 @@
 # out and counted (static_unmoved_parts_drawn_v1): the room the first vault
 # lift comes down into, its landing, drop, lower floor and stairs.
 --draw-static-parts
+# A furniture refused for its model's blocks is read as a static by its
+# parts (furn_unmoved_parts_drawn_v1), at rest: the shapes its controllers
+# and sequences can drive stay at their stored transforms, its particle
+# systems are left out (furn_parts_drawn_at_rest_v1): the cryo pods stand
+# in their bays.
+--draw-furniture-parts
+--draw-furniture-at-rest
 # A named platform's skinned shape whose bones go with several parts is
 # skinned again as they move (play_platform_skin_follows_parts_v1): the
 # elevators' decks and the walkways.
