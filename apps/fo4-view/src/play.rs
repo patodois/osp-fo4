@@ -1578,20 +1578,41 @@ mod enabled {
     pub fn cue_line(feet: [f64; 3], heading: Option<f64>, to: [f64; 3]) -> String {
         let (dx, dy) = (to[0] - feet[0], to[1] - feet[1]);
         let d = (dx * dx + dy * dy).sqrt();
-        let side = match heading {
-            Some(h) if d >= 1.0 => {
+        format!("Go back: {d:.0} units {}", cue_side(feet, heading, to))
+    }
+
+    /// Degrees either side of the heading within which a place is said to
+    /// be straight `ahead`; from there to 45 degrees it is `ahead, bear
+    /// left` or `ahead, bear right` (viewer policy). The 24th session's A
+    /// stood at the house with its cue's aim, the doorway, 39 degrees to
+    /// the right and the crosshair on the siding beside it while the cue
+    /// said only `ahead`.
+    pub const CUE_STRAIGHT: f64 = 15.0;
+
+    /// Where `to` lies from the walker's heading (degrees from +X towards
+    /// +Y) as the cue words it.
+    pub fn cue_side(feet: [f64; 3], heading: Option<f64>, to: [f64; 3]) -> &'static str {
+        let (dx, dy) = (to[0] - feet[0], to[1] - feet[1]);
+        match heading {
+            Some(h) if dx.hypot(dy) >= 1.0 => {
                 let rel = (dy.atan2(dx).to_degrees() - h).rem_euclid(360.0);
                 match rel {
-                    r if !(45.0..315.0).contains(&r) => "ahead",
+                    r if !(CUE_STRAIGHT..360.0 - CUE_STRAIGHT).contains(&r) => "ahead",
+                    r if r < 45.0 => "ahead, bear left",
+                    r if r > 315.0 => "ahead, bear right",
                     r if r < 135.0 => "to the left",
                     r if r < 225.0 => "behind you",
                     _ => "to the right",
                 }
             }
             _ => "here",
-        };
-        format!("Go back: {d:.0} units {side}")
+        }
     }
+
+    /// How much nearer than the way's whole length (game units) the cue's
+    /// aim must lie for the cue to name it apart (viewer policy): a door
+    /// the way passes close by, the rest of the way beyond it.
+    pub const CUE_AIM_APART: f64 = 96.0;
 
     /// How far along the walker's own trail the cue aims (game units of
     /// trail; viewer policy): near enough that the straight line to it
@@ -1835,9 +1856,15 @@ mod enabled {
         aim: [f64; 3],
         length: f64,
     ) -> String {
-        let line = cue_line(feet, heading, aim);
-        let side = line.split_once(" units ").map_or("here", |(_, s)| s);
-        format!("Go back: {length:.0} units {side}")
+        let side = cue_side(feet, heading, aim);
+        let near = (aim[0] - feet[0]).hypot(aim[1] - feet[1]);
+        if near >= 1.0 && length - near >= CUE_AIM_APART {
+            // The way's next point is near and the way goes on past it
+            // (a doorway): its own distance and side, the rest after.
+            format!("Go back: {length:.0} units; first {near:.0} {side}",)
+        } else {
+            format!("Go back: {length:.0} units {side}")
+        }
     }
 
     /// The person's activation targets by reference: the space each stands
@@ -3866,7 +3893,27 @@ mod enabled {
             // side from the heading (+X is heading 0, +Y is 90).
             assert_eq!(
                 cue_line([0.0, 0.0, 0.0], Some(0.0), [400.0, 300.0, 50.0]),
-                "Go back: 500 units ahead"
+                "Go back: 500 units ahead, bear left"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], Some(0.0), [400.0, 50.0, 0.0]),
+                "Go back: 403 units ahead"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], Some(0.0), [400.0, -300.0, 0.0]),
+                "Go back: 500 units ahead, bear right"
+            );
+            // The 24th session's A at the house: heading 95 degrees, the
+            // way's aim (a doorway) 47 units off at 56 degrees, the way 503
+            // units long: the doorway named apart, to the right.
+            assert_eq!(
+                cue_line_trail([0.0; 3], Some(95.0), [26.0, 39.0, 0.0], 503.0),
+                "Go back: 503 units; first 47 ahead, bear right"
+            );
+            // The aim nearly the whole way: the way's length alone.
+            assert_eq!(
+                cue_line_trail([0.0; 3], Some(95.0), [26.0, 39.0, 0.0], 100.0),
+                "Go back: 100 units ahead, bear right"
             );
             assert_eq!(
                 cue_line([0.0; 3], Some(0.0), [0.0, 200.0, 0.0]),
