@@ -1540,11 +1540,24 @@ mod enabled {
         use_why: String,
         /// The progress second whose stall was last reported.
         stall_said: f64,
+        /// The end of the last slice handed to the run: the input's clock
+        /// ([`cue_clock`]).
+        clock: f64,
     }
 
     /// Run seconds with no change of the run's quest log before the
     /// viewport shows where to go (viewer policy).
     pub const CUE_AFTER: f64 = 30.0;
+
+    /// The second the cues' wait is measured at (viewer policy): the
+    /// input's clock (the end of the last slice handed to the run), not
+    /// only the run's second. The run's second is that of its last event,
+    /// and it stands still while nothing is due (the 22nd session's A,
+    /// 2225.8 to 2290.6 s after the console: no event, so no stall was
+    /// ever seen and no use cue came).
+    pub fn cue_clock(run_now: f64, input_until: f64) -> f64 {
+        run_now.max(input_until)
+    }
 
     /// The farthest place the cue names (game units on the ground, to the
     /// volume's nearest point): a viewer policy. The seventeenth session's
@@ -2532,7 +2545,7 @@ mod enabled {
         /// the run without changing it.
         fn publish_cue(&mut self, run: &View<'_, '_>) {
             let w = &run.vm.world;
-            let now = run.now();
+            let now = cue_clock(run.now(), self.clock);
             if w.quests.log.len() != self.progress.0 {
                 let new = w.quests.log.get(self.progress.0..).unwrap_or_default();
                 let (counts, skipped) = quest_progress(new, &mut self.objectives);
@@ -2829,6 +2842,7 @@ mod enabled {
             let mut n = self.walker.next(run);
             self.publish_start();
             if let Next::Slice(s) = &n {
+                self.clock = self.clock.max(s.until);
                 if !self.gate.wait(s.until) {
                     n = Next::Stop;
                 }
@@ -3014,6 +3028,7 @@ mod enabled {
             scripted: (0, BTreeSet::new()),
             use_why: String::new(),
             stall_said: -1.0,
+            clock: 0.0,
             opens: switches
                 .opens
                 .iter()
@@ -3669,6 +3684,16 @@ mod enabled {
             let (eye, look) = eye_look(&s).unwrap();
             assert_eq!(eye[2], 3.0 + fo4_walk::Params::PROVISIONAL.eye_height);
             assert!((look[1] - eye[1] - 100.0).abs() < 1e-9 && (look[0] - eye[0]).abs() < 1e-9);
+        }
+
+        #[test]
+        fn the_cues_wait_on_the_input_clock_while_the_run_has_no_event() {
+            // The run's last event at 2225.8 s, the input handed to it up
+            // to 2260 s: 34.2 s without progress, past the wait.
+            let now = cue_clock(2225.8, 2260.0);
+            assert!(now - 2225.8 >= CUE_AFTER);
+            // Before any slice the run's own second stands.
+            assert_eq!(cue_clock(12.5, 0.0), 12.5);
         }
 
         #[test]

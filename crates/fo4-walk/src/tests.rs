@@ -1258,3 +1258,77 @@ fn a_walk_probe_is_stopped_by_low_furniture_a_sight_line_passes_over() {
     .unwrap();
     assert!(c.walks_to(&w3, [300.0, 0.0, P.step_height - 2.0]));
 }
+
+#[test]
+fn a_walk_probe_climbs_porch_steps_the_walker_climbs() {
+    // Porch steps: risers of 8 units, treads of 12, five of them, then a
+    // landing. The walker climbs them at its tick; the probe, from the
+    // foot or from a tread, walks the line up them too.
+    let b = budget();
+    for (rise, tread) in [(8.0, 12.0), (8.0, 10.0), (7.5, 14.0), (10.0, 11.0)] {
+        let mut w = World::new();
+        floor(&mut w, &b);
+        for i in 0..5 {
+            let x0 = 100.0 + tread * f64::from(i);
+            let top = rise * f64::from(i + 1);
+            w.add_hull(
+                &cuboid([x0, -200.0, 0.0], [400.0, 200.0, top]),
+                0.0,
+                "step",
+                &b,
+            )
+            .unwrap();
+        }
+        let p = Params {
+            walk_speed: 300.0,
+            ..P
+        };
+        let mut walker = Character::new(p, Settings::DEFAULT, [0.0, 0.0, 0.0]).unwrap();
+        walker.settle(&w, 600);
+        let top = 5.0 * rise;
+        // The walker climbs them at its own tick.
+        let mut climbed = false;
+        for _ in 0..600 {
+            let s = walker.tick(
+                &w,
+                Input {
+                    run: true,
+                    ..ahead(0.0)
+                },
+            );
+            if s.feet[0] > 220.0 && (s.feet[2] - top).abs() < 1.0 {
+                climbed = true;
+                break;
+            }
+        }
+        assert!(
+            climbed,
+            "rise {rise} tread {tread}: the walker does not climb"
+        );
+        // The probe: from the foot to the landing, and from each tread a
+        // short way up (a trail point 8 to 30 units on).
+        let mut c = Character::new(p, Settings::DEFAULT, [60.0, 0.0, 0.0]).unwrap();
+        c.settle(&w, 600);
+        assert!(
+            c.walks_to(&w, [260.0, 0.0, top]),
+            "rise {rise} tread {tread}: the probe does not walk up from the foot"
+        );
+        for i in 0..4 {
+            let x = 100.0 + tread * (f64::from(i) + 0.5);
+            let mut c = Character::new(
+                p,
+                Settings::DEFAULT,
+                [x, 0.0, rise * f64::from(i + 1) + 1.0],
+            )
+            .unwrap();
+            c.settle(&w, 600);
+            for d in [9.0, 16.0, 30.0] {
+                assert!(
+                    c.walks_to(&w, [x + d, 0.0, c.feet[2] + rise]),
+                    "rise {rise} tread {tread}: the probe from tread {i} at {:?} does not walk {d} units up",
+                    c.feet
+                );
+            }
+        }
+    }
+}

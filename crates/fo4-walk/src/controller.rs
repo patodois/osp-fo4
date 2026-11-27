@@ -501,7 +501,8 @@ impl Character {
     }
 
     /// Whether a copy of the character, walked (at the run speed, in ticks
-    /// of [`WALK_PROBE_TICK`] seconds) from its feet straight toward `to`
+    /// of [`WALK_PROBE_TICK`] seconds or shorter, a tick's move at most
+    /// half a radius) from its feet straight toward `to`
     /// on the ground, gets as far along the line as `to` (less half a radius) on the ground plane
     /// without being blocked, without sliding more than a radius off the
     /// straight line and without dropping more than its height below the
@@ -511,7 +512,17 @@ impl Character {
     /// eye stops it where a sight line passes over.
     pub fn walks_to<W: Space + ?Sized>(&self, world: &W, to: V3) -> bool {
         let mut c = self.clone();
-        c.settings.tick = WALK_PROBE_TICK;
+        // A tick moves the copy at most half a radius: a longer move
+        // raised by the step height crosses more than one riser of a
+        // flight of steps and is refused where the walker, at its own
+        // tick, climbs (porch steps of 8 units).
+        let speed = c.params.run_speed.max(c.params.walk_speed);
+        let tick = if speed > 0.0 && c.params.radius > 0.0 {
+            WALK_PROBE_TICK.min(0.5 * c.params.radius / speed)
+        } else {
+            WALK_PROBE_TICK
+        };
+        c.settings.tick = tick;
         c.accumulator = 0.0;
         c.velocity = [0.0; 3];
         let from = c.feet;
@@ -529,13 +540,15 @@ impl Character {
             heading,
             run: true,
         };
-        let per_tick = c.params.run_speed.max(c.params.walk_speed) * WALK_PROBE_TICK;
+        let per_tick = speed * tick;
         if per_tick.is_nan() || per_tick <= 0.0 {
             return false;
         }
         let floor = from[2].min(to[2]) - c.params.height;
         let ticks = (len / per_tick).ceil() as u64 + 8;
-        for _ in 0..ticks.min(WALK_PROBE_MAX_TICKS) {
+        // As far as WALK_PROBE_MAX_TICKS ticks of WALK_PROBE_TICK go.
+        let most = (WALK_PROBE_MAX_TICKS as f64 * WALK_PROBE_TICK / tick).ceil() as u64;
+        for _ in 0..ticks.min(most) {
             let s = c.tick(world, input);
             let rel = [s.feet[0] - from[0], s.feet[1] - from[1]];
             let off = (rel[0] * dir[1] - rel[1] * dir[0]).abs();
