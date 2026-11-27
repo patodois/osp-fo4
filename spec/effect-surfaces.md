@@ -145,6 +145,14 @@ that each can be refuted alone:
   copies its depth buffer after Bevy's opaque pass into a buffer every
   material binds (`gpu::SoftDepthBuffer`). An unblended soft surface keeps
   the left-out rule.
+- The hard vertical edge a soft sheet kept against the sky in the 19th
+  session B record at 2004 s is not the sheet's border (its outer ring of
+  vertices has vertex alpha 0) but the window's near plane: the sheet's
+  plane passes 14.9 units from the eye and the reference frame's near clip
+  at 15 units cut it along a vertical line on screen.
+  `window_near_clip_assumed_v1` (`fo4-view --view-near UNITS`, 5 in the
+  play preset) clips the window nearer; the data read so far states no
+  near clip for the game's camera.
 - `effect_falloff_view_angle_v1` and its companions: see Falloff below.
 
 The draw build applies the effect path only to instances whose state

@@ -204,6 +204,12 @@
 # (effect_soft_depth_fade_linear_v1): the distant cloud card's white edge
 # on the new road.
 --draw-soft-effects
+# The window's camera clips at 5 units in front of the eye, not the
+# reference frame's 15 (window_near_clip_assumed_v1): a sheet whose plane
+# passes close to the eye is drawn whole, not cut along a line across the
+# sky.
+--view-near
+5
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots

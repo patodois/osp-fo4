@@ -379,6 +379,7 @@ fn window_aids(s: &cli::Scene, debug: cli::WindowDebug) -> AnyResult<gpu::Aids> 
     };
     Ok(gpu::Aids {
         soft_effects: s.drawing.soft_effects,
+        view_near: s.drawing.view_near,
         frame_log,
         script: debug.path.map(|p| gpu::Script::new(p, shots)),
     })

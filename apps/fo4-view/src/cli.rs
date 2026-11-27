@@ -24,7 +24,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-platform-nearest-part]
-           [--draw-reference-alpha]
+           [--draw-reference-alpha] [--view-near UNITS]
            [--draw-scripted-as-stored] [--draw-activator-fields]
            [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
@@ -588,6 +588,11 @@ pub struct Drawing {
     /// (`fo4_render::draw::BuildOptions::soft_effects`; the window copies
     /// the opaque depth after its opaque pass, `gpu::SoftDepthBuffer`).
     pub soft_effects: bool,
+    /// `--view-near UNITS` (`window_near_clip_assumed_v1`): the window's
+    /// camera clips at UNITS (whole game units, 1 to 14) in front of the
+    /// eye instead of the reference frame's 15 (`gpu::ViewNear`); the CPU
+    /// reference and the headless frames keep 15.
+    pub view_near: Option<u32>,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -1092,6 +1097,15 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--draw-cast-settles" => drawing.cast_settles = true,
             "--draw-soft-effects" => drawing.soft_effects = true,
+            "--view-near" => {
+                let v = value()?;
+                drawing.view_near = Some(
+                    v.parse::<u32>()
+                        .ok()
+                        .filter(|n| (1..15).contains(n))
+                        .ok_or_else(|| format!("--view-near: whole units from 1 to 14, not {v}"))?,
+                );
+            }
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1835,6 +1849,30 @@ mod tests {
     /// `docs/unmeasured.md` names every switch of the play preset, its
     /// table holds every rule a preset comment names, and every rule of the
     /// table is pending in the registry and on a switch of the preset.
+    #[test]
+    fn the_window_near_clip_takes_whole_units_below_the_reference() {
+        // `window_near_clip_assumed_v1`.
+        let near = |v: &str| {
+            parse(&args(&format!(
+                "m d C --eye 1,2,3 --look 4,5,6 --view-near {v}"
+            )))
+            .map(|c| match c {
+                Command::Window { scene, .. } => scene.drawing.view_near,
+                _ => panic!(),
+            })
+        };
+        assert_eq!(near("5"), Ok(Some(5)));
+        assert_eq!(near("14"), Ok(Some(14)));
+        for bad in ["0", "15", "2.5", "-1"] {
+            assert!(near(bad).is_err(), "{bad}");
+        }
+        let Command::Window { scene, .. } = parse(&args("m d C --eye 1,2,3 --look 4,5,6")).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(scene.drawing.view_near, None);
+    }
+
     #[test]
     fn the_unmeasured_page_lists_the_presets_rules() {
         let page = include_str!("../../../docs/unmeasured.md");

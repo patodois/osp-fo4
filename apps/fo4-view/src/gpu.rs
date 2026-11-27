@@ -93,6 +93,12 @@ pub struct SoftDepthBuffer(pub Handle<ShaderBuffer>);
 #[derive(Resource)]
 struct SoftEffectsOn;
 
+/// `--view-near UNITS` (`window_near_clip_assumed_v1`): the window's
+/// camera clips this many units in front of the eye instead of the
+/// reference frame's [`fo4_scene::camera::REFERENCE_NEAR`].
+#[derive(Resource, Clone, Copy)]
+pub struct ViewNear(pub u32);
+
 /// The camera whose opaque depth [`copy_soft_depth`] copies.
 #[derive(Component, Clone, Copy, bevy::render::extract_component::ExtractComponent)]
 #[extract_app(RenderApp)]
@@ -1474,7 +1480,10 @@ fn spawn_window_scene(world: &mut World) {
         return;
     };
     // The window's first resize sets the vertical slopes from its aspect.
-    let frustum = fo4_scene::camera::reference_frustum(fo4_scene::camera::REFERENCE_SIZE);
+    let mut frustum = fo4_scene::camera::reference_frustum(fo4_scene::camera::REFERENCE_SIZE);
+    if let Some(near) = world.get_resource::<ViewNear>() {
+        frustum[4] = f64::from(near.0);
+    }
     let soft = world.contains_resource::<SoftEffectsOn>();
     let mut c = world.spawn((camera_bundle(pose, frustum, true, clear, 0, 0), FlyCamera));
     if soft {
@@ -4167,6 +4176,8 @@ pub struct Aids {
     /// `--draw-soft-effects`: the window's soft depth buffer and copy
     /// ([`SoftDepthBuffer`], [`SOFT_DEPTH_MAX_VIEW`]).
     pub soft_effects: bool,
+    /// `--view-near UNITS` ([`ViewNear`]).
+    pub view_near: Option<u32>,
     pub frame_log: Option<std::fs::File>,
     pub script: Option<Script>,
 }
@@ -4175,6 +4186,9 @@ impl Aids {
         if self.soft_effects {
             soft_depth_buffer(app.world_mut(), Some(SOFT_DEPTH_MAX_VIEW));
             app.insert_resource(SoftEffectsOn);
+        }
+        if let Some(near) = self.view_near {
+            app.insert_resource(ViewNear(near));
         }
         if let Some(file) = self.frame_log {
             app.insert_resource(FrameLog::new(file))
