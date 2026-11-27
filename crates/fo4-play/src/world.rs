@@ -202,6 +202,15 @@ pub struct Options {
     /// `--play-door-stored-open`). Off: such a door has no state at load,
     /// as before.
     pub stored_open: bool,
+    /// With [`Options::around`] above 0, the worldspace's persistent
+    /// references standing in the loaded grid squares join the cell build
+    /// before its collision is read, as the drawing joins them
+    /// (`fo4_scene::grid::absorb_persistent`): their collision stands in
+    /// the walking world as any loaded reference's, under the same
+    /// readiness (`play_world_persistent_refs_walk_in_square_v1`,
+    /// `--play-collision-persistent`). Off: a cell build reads its own
+    /// groups only, as before.
+    pub persistent: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -548,6 +557,19 @@ pub fn build(
         fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         grid = Some(a);
     }
+    // The worldspace's persistent references in the loaded squares
+    // (`play_world_persistent_refs_walk_in_square_v1`).
+    let mut joined = None;
+    if let (true, Some(a)) = (o.persistent, &grid) {
+        if a.searched {
+            joined = Some(fo4_scene::grid::absorb_persistent(
+                &mut loader,
+                &mut scene,
+                a,
+                &budget,
+            )?);
+        }
+    }
     let options = fo4_scene::collision::Options {
         level,
         body_placement: None,
@@ -567,6 +589,21 @@ pub fn build(
     let mut refs = refs_before;
     refs.resize(world.sources.len(), None);
     let mut counts = BTreeMap::new();
+    if let Some(j) = joined {
+        for (what, n) in [
+            ("joined as instances", j.added),
+            ("joined as initially disabled", j.disabled),
+            ("already loaded", j.already),
+            ("left out (no instance)", j.failed),
+        ] {
+            if n > 0 {
+                counts.insert(
+                    format!("persistent references of the loaded squares\t{what}"),
+                    n as u64,
+                );
+            }
+        }
+    }
     // The collision markers' boxes come after the terrain, each with its
     // reference (`play_collision_marker_boxes_v1`).
     let space_key = norm(&fo4_scene::timeline::scene_space(store, &scene));

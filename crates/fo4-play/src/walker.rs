@@ -160,6 +160,12 @@ pub struct Options {
     /// for the held doors' reading from load ([`Walker::held_door_states`];
     /// `play_door_stored_open_v1`, `--play-door-stored-open`).
     pub door_stored_open: bool,
+    /// The worldspace's persistent references of the loaded squares in
+    /// every walking world the walker builds
+    /// ([`crate::world::Options::persistent`];
+    /// `play_world_persistent_refs_walk_in_square_v1`,
+    /// `--play-collision-persistent`).
+    pub persistent: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -198,6 +204,7 @@ impl Default for Options {
             door_toggle: false,
             door_toggle_blocked: false,
             door_stored_open: false,
+            persistent: false,
             stand: None,
             first_met: false,
             pick_actors: false,
@@ -494,6 +501,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if c.furniture_at_rest {
         out.insert(fo4_scene::hypotheses::FURNITURE_COLLISION_AT_REST);
+    }
+    if o.persistent {
+        out.insert(crate::rules::WORLD_PERSISTENT_COLLISION);
     }
     out
 }
@@ -2109,6 +2119,7 @@ impl Walker {
             held_at_load: self.opts.held_at_load,
             door_open: self.opts.door_open,
             stored_open: self.opts.door_stored_open,
+            persistent: self.opts.persistent,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));

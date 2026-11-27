@@ -458,7 +458,7 @@ fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
         "UnsupportedUsedFieldLayout",
         "ACTI.FNAM.x"
     )));
-    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT"] {
+    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT", "FNPR"] {
         assert!(furniture_field(&e(
             "UninterpretedVisualSubrecord",
             &format!("FURN.{f}.layout_not_established")
@@ -496,7 +496,7 @@ fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
         "UnsupportedUsedFieldLayout",
         "FURN.OBTS.x"
     )));
-    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT", "MODT"] {
+    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT", "FNPR", "MODT"] {
         assert!(!furniture_template_field(&e(
             "UninterpretedVisualSubrecord",
             &format!("FURN.{f}.layout_not_established")

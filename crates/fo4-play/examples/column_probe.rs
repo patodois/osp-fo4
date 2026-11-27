@@ -181,7 +181,12 @@ fn run() -> Result<(), E> {
             heading,
             run: true,
         };
-        for k in 0..12 {
+        // COLUMN_PROBE_TICKS=N ticks (12 by default).
+        let ticks = std::env::var("COLUMN_PROBE_TICKS")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(12);
+        for k in 0..ticks {
             let s = c.tick(world, input);
             println!(
                 "tick {k}: feet [{:.2}, {:.2}, {:.2}] grounded {} blocked {} stepped {}",
@@ -254,7 +259,18 @@ fn run() -> Result<(), E> {
     if wo.child_flag_agrees {
         loader.set_collision_child_flag_agrees(true);
     }
-    let scene = loader.cell(&cell, &budget)?;
+    let mut scene = loader.cell(&cell, &budget)?;
+    // As the walking world's build reads them: the cells about it and,
+    // with `--play-collision-persistent`, the worldspace's persistent
+    // references in the loaded squares.
+    if wo.around > 0 {
+        let a = fo4_scene::grid::around(&store, &scene.cell.key, wo.around, &budget)?;
+        fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
+        if wo.persistent && a.searched {
+            let j = fo4_scene::grid::absorb_persistent(&mut loader, &mut scene, &a, &budget)?;
+            println!("\n# persistent references joined: {j:?}");
+        }
+    }
     let options = fo4_scene::collision::Options {
         level,
         body_placement: None,
@@ -305,6 +321,85 @@ fn run() -> Result<(), E> {
     };
     for i in &scene.instances {
         show(i, "instance");
+    }
+    // COLUMN_PROBE_CENSUS=SIGNATURES (comma separated, for example
+    // FURN,MSTT): every placement of those bases whose object bounds meet
+    // the rectangle from (X, Y) to (X2, Y2) between Z - 4 RADIUS and
+    // Z + RADIUS, one line each: whether its model stores collision (the
+    // bodies its model places as stored, `collision::instance_as_stored`),
+    // whether that collision is in the walking world, and why not.
+    if let Ok(sigs) = std::env::var("COLUMN_PROBE_CENSUS") {
+        let sigs: Vec<&str> = sigs.split(',').collect();
+        let (lo, hi) = (
+            [a[0].min(b[0]), a[1].min(b[1])],
+            [a[0].max(b[0]), a[1].max(b[1])],
+        );
+        println!("\n# census\tref\tbase\tsig\tmodel\tsize\tstored collision\tin world\twhy not");
+        for i in &scene.instances {
+            let Some(base) = i.base.as_ref() else {
+                continue;
+            };
+            let sig = String::from_utf8_lossy(&base.record.signature).into_owned();
+            if !sigs.contains(&sig.as_str()) {
+                continue;
+            }
+            let Some(bx) = placed_box(i) else { continue };
+            if bx.max[0] < lo[0] || bx.min[0] > hi[0] || bx.max[1] < lo[1] || bx.min[1] > hi[1] {
+                continue;
+            }
+            if bx.min[2] > z + r || bx.max[2] < z - 4.0 * r {
+                continue;
+            }
+            let k = &i.reference.key;
+            let o = fo4_scene::collision::Options {
+                level,
+                body_placement: c.body_placement,
+            };
+            let stored =
+                match fo4_scene::collision::instance_as_stored(i, &loader, &m.limits, o, &budget) {
+                    Ok(one) if !one.instances.is_empty() => {
+                        format!("yes ({} bodies)", one.instances.len())
+                    }
+                    Ok(one) if !one.without_collision.is_empty() => {
+                        "no (no collision object)".to_string()
+                    }
+                    Ok(one) => format!(
+                        "no ({} unplaced: {:?})",
+                        one.unplaced.len(),
+                        one.unplaced
+                            .iter()
+                            .map(|u| u.code.clone())
+                            .collect::<BTreeSet<_>>()
+                    ),
+                    Err(e) => format!("unread ({e})"),
+                };
+            let size = [0, 1, 2].map(|n| (bx.max[n] - bx.min[n]).round());
+            println!(
+                "census\t{}\t{}\t{sig}\t{:?}\t{size:?}\t{stored}\t{}\t{}",
+                key(k),
+                key(&base.key),
+                base.common.model.path.clone().unwrap_or_default(),
+                in_world.contains(k),
+                if in_world.contains(k) {
+                    String::new()
+                } else if without.contains(k) {
+                    "no collision object in its model".to_string()
+                } else {
+                    let codes: BTreeSet<String> = i
+                        .blockers
+                        .iter()
+                        .map(|e| format!("{} {:?}", e.code, e.found))
+                        .collect();
+                    format!(
+                        "{}; blockers {}",
+                        why.get(k)
+                            .map(|v| v.join("; "))
+                            .unwrap_or_else(|| "-".into()),
+                        codes.into_iter().collect::<Vec<_>>().join(", ")
+                    )
+                }
+            );
+        }
     }
     // Each door near the line split into its still part and the parts its
     // sequences move, each moving part posed at the last key of each

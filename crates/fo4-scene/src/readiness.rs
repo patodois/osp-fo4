@@ -395,8 +395,10 @@ pub fn activator_receiver_field(e: &Error) -> bool {
 /// A furniture base's (`FURN`) subrecords whose layout this project has
 /// not established, set aside for drawing under
 /// `furn_fields_render_unchanged_v1` (xEdit's published names: marker
-/// colour, flags, active markers, sit sound, workbench data).
-pub const FURNITURE_FIELDS: [&str; 5] = ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT"];
+/// colour, flags, active markers, sit sound, workbench data), and `FNPR`,
+/// a four-byte subrecord of furniture whose model is a seat or a table
+/// (round 29: the vault's benches and tables were refused for it alone).
+pub const FURNITURE_FIELDS: [&str; 6] = ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT", "FNPR"];
 
 /// Whether `e` is the record blocker of a furniture's (`FURN`) unread
 /// [`FURNITURE_FIELDS`].

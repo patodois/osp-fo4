@@ -220,6 +220,84 @@ fn the_scene_takes_the_references_of_every_cell_around() {
     assert_eq!(alone.instances.len(), 2);
 }
 
+/// A placed reference at `pos`.
+fn reference_at(id: u32, pos: [f32; 3]) -> Vec<u8> {
+    let mut r = sub(b"NAME", &0x801u32.to_le_bytes());
+    let mut tr = Vec::new();
+    for f in [pos[0], pos[1], pos[2], 0., 0., 0.] {
+        tr.extend(f.to_le_bytes());
+    }
+    r.extend(sub(b"DATA", &tr));
+    record(b"REFR", id, 0, &r)
+}
+
+#[test]
+fn the_persistent_references_of_the_loaded_squares_join_the_scene_once() {
+    // The world's persistent cell holds two persistent references: one in
+    // the centre's square (0, 0), one far away in square (12, 12).
+    let mut persistent = record(b"CELL", 0x8b0, 0, &sub(b"EDID", b"Persistent\0"));
+    let kids = [
+        reference_at(0x8b1, [100.0, 200.0, 0.0]),
+        reference_at(0x8b2, [50_000.0, 50_000.0, 0.0]),
+    ]
+    .concat();
+    persistent.extend(group(6, 0x8b0, &group(8, 0x8b0, &kids)));
+    let cells = [cell(0x810, 0, 0, 2), cell(0x820, 1, 0, 1)].concat();
+    let mut children = persistent;
+    children.extend(group(4, 0, &group(5, 0, &cells)));
+    let world = [
+        record(b"WRLD", 0x800, 0, &sub(b"EDID", b"World\0")),
+        group(1, 0x800, &children),
+    ]
+    .concat();
+    let mut body = group(
+        0,
+        u32::from_le_bytes(*b"STAT"),
+        &record(b"STAT", 0x801, 0, &[]),
+    );
+    body.extend(group(0, u32::from_le_bytes(*b"WRLD"), &world));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend(0u32.to_le_bytes());
+    hedr.extend(0x900u32.to_le_bytes());
+    let mut plugin = record(b"TES4", 0, 1, &sub(b"HEDR", &hedr));
+    plugin.extend(body);
+    let temp = TestDir::new("scene-grid-persistent");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let mut manifest = fixture().manifest;
+    manifest.root = root;
+    let b = budget();
+    let store = Store::open(&manifest, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&manifest, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Measured, &b);
+    let mut scene = loader.cell(&key(0x810), &b).unwrap();
+    let a = around(&store, &key(0x810), 1, &b).unwrap();
+    absorb_around(&mut loader, &mut scene, &a, &b).unwrap();
+    assert_eq!(scene.instances.len(), 3);
+    let (active, disabled) = persistent_in(&store, &key(0x800), &[[0, 0]], &b).unwrap();
+    assert_eq!(
+        active.iter().map(|k| k.key.object_id).collect::<Vec<_>>(),
+        [0x8b1]
+    );
+    assert!(disabled.is_empty());
+    let j = absorb_persistent(&mut loader, &mut scene, &a, &b).unwrap();
+    assert_eq!((j.added, j.disabled, j.already, j.failed), (1, 0, 0, 0));
+    assert_eq!(scene.instances.len(), 4);
+    assert!(scene
+        .instances
+        .iter()
+        .any(|i| i.reference.key == key(0x8b1)));
+    assert!(!scene
+        .instances
+        .iter()
+        .any(|i| i.reference.key == key(0x8b2)));
+    // Joined again: already there, nothing added.
+    let j = absorb_persistent(&mut loader, &mut scene, &a, &b).unwrap();
+    assert_eq!((j.added, j.already), (0, 1));
+    assert_eq!(scene.instances.len(), 4);
+}
+
 /// Loads the centre and its ring with every account under `root`; returns
 /// the root's credits after absorbing, or the error.
 fn absorb_with(f: &Fixture, root: &Budget) -> fo4_core::Result<u64> {

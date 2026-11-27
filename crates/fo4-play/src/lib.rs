@@ -224,8 +224,15 @@ pub mod rules {
     /// sequence's last key, its prompt close; the person's activation
     /// closes it under the toggle (`--play-door-stored-open`).
     pub const DOOR_STORED_OPEN: &str = "play_door_stored_open_v1";
+    /// The worldspace's persistent references (those of its cells'
+    /// persistent groups) whose stored position lies in a grid square the
+    /// walking world loads join that build's scene before its collision
+    /// is read, as `world_persistent_refs_drawn_in_square_v1` joins them
+    /// to the drawing: their collision stands as any loaded reference's
+    /// (`--play-collision-persistent`).
+    pub const WORLD_PERSISTENT_COLLISION: &str = "play_world_persistent_refs_walk_in_square_v1";
     /// Every rule above.
-    pub const ALL: [&str; 33] = [
+    pub const ALL: [&str; 34] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -259,6 +266,7 @@ pub mod rules {
         DOOR_TOGGLE,
         DOOR_TOGGLE_BLOCKED,
         DOOR_STORED_OPEN,
+        WORLD_PERSISTENT_COLLISION,
     ];
 }
 

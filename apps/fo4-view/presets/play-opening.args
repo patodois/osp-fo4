@@ -91,6 +91,10 @@
 # (furn_fields_collision_unchanged_v1, furn_collision_at_rest_v1).
 --play-collision-furniture-fields
 --play-collision-furniture-at-rest
+# The worldspace's persistent references in the loaded squares join the
+# walking world's cell builds, as the drawing joins them: the living room's
+# sofa and the nursery's crib stand (play_world_persistent_refs_walk_in_square_v1).
+--play-collision-persistent
 # E meets what the crosshair enters first (play_activate_ray_first_met_v1).
 --play-pick-first-met
 # The caller's actions held until a stage keep their offset from it, and the
