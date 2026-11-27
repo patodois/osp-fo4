@@ -2,7 +2,7 @@ use crate::blocks::{Field, Reader, Value};
 use fo4_core::{add, half_to_f32, limit, mul, range, Budget, Cursor, Error, Result};
 use serde::Serialize;
 use std::ops::Range;
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Vertex {
     #[serde(serialize_with = "fo4_core::ieee::serialize")]
     pub position: Option<[f32; 3]>,
@@ -23,7 +23,7 @@ pub struct Vertex {
     #[serde(serialize_with = "fo4_core::ieee::serialize")]
     pub eye: Option<f32>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Mesh {
     pub non_finite: crate::NonFiniteCounts,
     pub fields: Vec<Field>,

@@ -2989,3 +2989,72 @@ fn kept_files_hold_what_the_visit_read() {
         format!("{:?}", plain.list.meshes)
     );
 }
+
+/// `Assets::keep_models` (a caller's policy, the play window's loads): a
+/// second build from the same loader takes its models from the kept
+/// parses, not a new parse, and its draw list is the one a loader without
+/// them builds, byte for byte in its Debug text and in the CPU frame; with
+/// no cap nothing is kept.
+#[test]
+fn kept_models_answer_a_second_build_alike() {
+    let (_temp, m) = fixture_placing("render-kept-models", &dds(), nif(b"textures/a.dds"), 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let options = || BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: false,
+        soft_effects: false,
+    };
+    let frame = |l: &crate::DrawList| {
+        let camera = fo4_scene::camera::look_at(
+            [-300., -300., 200.],
+            [0., 0., 0.],
+            fo4_scene::camera::reference_frustum([64, 48]),
+            [64, 48],
+        )
+        .unwrap();
+        crate::render(
+            l,
+            &camera,
+            crate::RenderOptions::REFERENCE,
+            &fo4_core::Limits::default(),
+            &Budget::new(64 << 20),
+        )
+        .unwrap()
+        .color
+    };
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let plain = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let models = |l: &Loader<'_>| l.assets.parses()[0].0;
+    assert_eq!(loader.assets.kept_models().models, 0);
+    loader.assets.keep_models(1 << 20);
+    let before = models(&loader);
+    let first = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let k1 = loader.assets.kept_models();
+    assert!(k1.models > 0 && k1.bytes > 0 && k1.parsed > 0, "{k1:?}");
+    let parsed_first = models(&loader) - before;
+    assert!(parsed_first > 0);
+    let second = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let k2 = loader.assets.kept_models();
+    assert_eq!(
+        models(&loader) - before,
+        parsed_first,
+        "no model parsed again"
+    );
+    assert!(k2.hits >= parsed_first, "{k1:?} {k2:?}");
+    for x in [&first, &second] {
+        assert_eq!(format!("{:?}", x.list), format!("{:?}", plain.list));
+        assert_eq!(frame(&x.list), frame(&plain.list));
+    }
+    loader.assets.keep_models(0);
+    assert_eq!(loader.assets.kept_models().bytes, 0);
+    assert_eq!(loader.assets.kept_models().models, 0);
+}

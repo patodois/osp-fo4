@@ -674,6 +674,21 @@ pub fn kept_files_max() -> u64 {
         .map_or(KEPT_FILES_MAX, |m| m << 20)
 }
 
+/// The most the kept assets keep of the models they parsed for the next
+/// read of the same model (`fo4_scene::Assets::keep_models`; viewer
+/// policy): each model's file bytes and its parse's credits. Not counted
+/// in [`KEPT_ASSETS_MAX`]'s measure.
+pub const KEPT_MODELS_MAX: u64 = 256 << 20;
+
+/// [`KEPT_MODELS_MAX`], or `FO4_VIEW_MODEL_MEMO_MIB` mebibytes when set
+/// (`0`: no model kept; measurement only).
+pub fn kept_models_max() -> u64 {
+    std::env::var("FO4_VIEW_MODEL_MEMO_MIB")
+        .ok()
+        .and_then(|x| x.parse::<u64>().ok())
+        .map_or(KEPT_MODELS_MAX, |m| m << 20)
+}
+
 /// Each loaded grid square of `--around`: its offset, its grid and the
 /// cell that claims it (`-` when none), the centre first.
 pub fn squares_line(a: &fo4_scene::grid::Around) -> String {
@@ -732,6 +747,7 @@ pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
         }
     }
     loader.assets.keep_files(kept_files_max());
+    loader.assets.keep_models(kept_models_max());
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1602,6 +1618,15 @@ pub fn cell<'s>(
             f.hits,
             f.hits + f.reads,
             f.from_visits
+        );
+        let k = loader.assets.kept_models();
+        println!(
+            "models kept for the next load: {} models, {:.1} MiB (at most {} MiB); reads answered by a kept parse {}, models parsed {}",
+            k.models,
+            k.bytes as f64 / f64::from(1u32 << 20),
+            kept_models_max() >> 20,
+            k.hits,
+            k.parsed
         );
         slot.assets = Some(std::mem::replace(
             &mut loader.assets,

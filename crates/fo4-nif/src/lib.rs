@@ -10,7 +10,7 @@ use fo4_core::{add, limit, mul, range, Budget, Cursor, Error, Game, Limits, Resu
 pub use geometry::{Mesh, Vertex};
 use serde::Serialize;
 use std::ops::Range;
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Block {
     pub type_index: u16,
     pub data: Range<usize>,
@@ -18,8 +18,12 @@ pub struct Block {
     pub raw_tail: Range<usize>,
     pub diagnostics: Vec<Error>,
 }
-#[derive(Debug, Serialize)]
-pub struct Nif<'a> {
+/// What a parse of a NIF file holds apart from the file's bytes: owned,
+/// so that one parse can be shared by later reads of the same file
+/// ([`Nif::shared`], a caller's memo of parsed models).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename = "Nif")]
+pub struct NifBody {
     pub version: u32,
     pub user_version: u32,
     pub bs_version: u32,
@@ -30,10 +34,67 @@ pub struct Nif<'a> {
     pub groups: Vec<u32>,
     pub roots: Vec<i32>,
     pub blocks: Vec<Block>,
-    #[serde(skip)]
+}
+/// A parsed NIF file: its [`NifBody`] (read through `Deref`) and the bytes
+/// it was parsed from. Writing a field through `DerefMut` copies a shared
+/// body first, so a shared parse is never changed under another reader.
+pub struct Nif<'a> {
+    body: std::sync::Arc<NifBody>,
     pub bytes: &'a [u8],
 }
+impl std::ops::Deref for Nif<'_> {
+    type Target = NifBody;
+    fn deref(&self) -> &NifBody {
+        &self.body
+    }
+}
+impl std::ops::DerefMut for Nif<'_> {
+    fn deref_mut(&mut self) -> &mut NifBody {
+        std::sync::Arc::make_mut(&mut self.body)
+    }
+}
+/// As the fields' derive printed them, the bytes last.
+impl std::fmt::Debug for Nif<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let b = &*self.body;
+        f.debug_struct("Nif")
+            .field("version", &b.version)
+            .field("user_version", &b.user_version)
+            .field("bs_version", &b.bs_version)
+            .field("exports", &b.exports)
+            .field("block_types", &b.block_types)
+            .field("strings", &b.strings)
+            .field("max_string_length", &b.max_string_length)
+            .field("groups", &b.groups)
+            .field("roots", &b.roots)
+            .field("blocks", &b.blocks)
+            .field("bytes", &self.bytes)
+            .finish()
+    }
+}
+/// The body's fields (the bytes are not serialized, as before).
+impl Serialize for Nif<'_> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
+        self.body.serialize(s)
+    }
+}
 impl<'a> Nif<'a> {
+    /// A model of `body` parsed from `bytes`.
+    pub fn new(body: NifBody, bytes: &'a [u8]) -> Self {
+        Self {
+            body: std::sync::Arc::new(body),
+            bytes,
+        }
+    }
+    /// A model sharing the parse `body` of `bytes` (the same file's bytes
+    /// it was parsed from: a caller's memo keeps the two together).
+    pub fn shared(body: std::sync::Arc<NifBody>, bytes: &'a [u8]) -> Self {
+        Self { body, bytes }
+    }
+    /// The parse, to share with a later read of the same bytes.
+    pub fn body(&self) -> &std::sync::Arc<NifBody> {
+        &self.body
+    }
     pub fn read(bytes: &'a [u8], file: &str, game: Game, l: &Limits, b: &Budget) -> Result<Self> {
         l.validate(file)?;
         limit(bytes.len() as u64, l.max_payload, file, 0)?;
@@ -236,19 +297,21 @@ impl<'a> Nif<'a> {
                 }
             }
         }
-        let nif = Self {
-            version,
-            user_version,
-            bs_version,
-            exports,
-            block_types,
-            strings,
-            max_string_length,
-            groups,
-            roots,
-            blocks,
+        let nif = Self::new(
+            NifBody {
+                version,
+                user_version,
+                bs_version,
+                exports,
+                block_types,
+                strings,
+                max_string_length,
+                groups,
+                roots,
+                blocks,
+            },
             bytes,
-        };
+        );
         nif.check_scene(file, l, b)?;
         Ok(nif)
     }

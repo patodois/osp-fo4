@@ -68,55 +68,57 @@ fn leaf_nif(stored: f32, z: [f32; 3], flags: u16) -> Nif<'static> {
     }
     data.extend([u("Num Keys", 0), u("Num Keys", 0)]);
     let unset = crate::rest::INVALID;
-    Nif {
-        version: 0x1402_0007,
-        user_version: 12,
-        bs_version: 130,
-        exports: Vec::new(),
-        block_types: vec![
-            "NiNode".into(),
-            "NiTransformController".into(),
-            "NiTransformInterpolator".into(),
-            "NiTransformData".into(),
-        ],
-        strings: vec![b"root".to_vec(), b"leaf".to_vec(), b"other".to_vec()],
-        max_string_length: 5,
-        groups: Vec::new(),
-        roots: vec![0],
-        blocks: vec![
-            node(0, node_fields(0, [0.; 3], 0., 9), vec![1, 5]),
-            node(0, node_fields(1, [1., 0., 0.], stored, -1), vec![]),
-            block(
-                1,
-                vec![
-                    field("Controller Flags", Value::U16(flags)),
-                    fl("Frequency", 1.),
-                    fl("Phase", 0.),
-                    fl("Start Time", 0.),
-                    fl("Stop Time", 2.),
-                    field("Target", Value::Ref(1)),
-                    field("Interpolator", Value::Ref(3)),
-                ],
-            ),
-            block(
-                2,
-                vec![
-                    fl("Translation", unset),
-                    fl("Translation", unset),
-                    fl("Translation", unset),
-                    fl("Quaternion", unset),
-                    fl("Quaternion", unset),
-                    fl("Quaternion", unset),
-                    fl("Quaternion", unset),
-                    fl("Scale", unset),
-                    field("Data", Value::Ref(4)),
-                ],
-            ),
-            block(3, data),
-            node(0, node_fields(2, [0., 5., 0.], 0., -1), vec![]),
-        ],
-        bytes: &[],
-    }
+    fo4_nif::Nif::new(
+        fo4_nif::NifBody {
+            version: 0x1402_0007,
+            user_version: 12,
+            bs_version: 130,
+            exports: Vec::new(),
+            block_types: vec![
+                "NiNode".into(),
+                "NiTransformController".into(),
+                "NiTransformInterpolator".into(),
+                "NiTransformData".into(),
+            ],
+            strings: vec![b"root".to_vec(), b"leaf".to_vec(), b"other".to_vec()],
+            max_string_length: 5,
+            groups: Vec::new(),
+            roots: vec![0],
+            blocks: vec![
+                node(0, node_fields(0, [0.; 3], 0., 9), vec![1, 5]),
+                node(0, node_fields(1, [1., 0., 0.], stored, -1), vec![]),
+                block(
+                    1,
+                    vec![
+                        field("Controller Flags", Value::U16(flags)),
+                        fl("Frequency", 1.),
+                        fl("Phase", 0.),
+                        fl("Start Time", 0.),
+                        fl("Stop Time", 2.),
+                        field("Target", Value::Ref(1)),
+                        field("Interpolator", Value::Ref(3)),
+                    ],
+                ),
+                block(
+                    2,
+                    vec![
+                        fl("Translation", unset),
+                        fl("Translation", unset),
+                        fl("Translation", unset),
+                        fl("Quaternion", unset),
+                        fl("Quaternion", unset),
+                        fl("Quaternion", unset),
+                        fl("Quaternion", unset),
+                        fl("Scale", unset),
+                        field("Data", Value::Ref(4)),
+                    ],
+                ),
+                block(3, data),
+                node(0, node_fields(2, [0., 5., 0.], 0., -1), vec![]),
+            ],
+        },
+        &[],
+    )
 }
 
 const CLAMPED: u16 = 0x4c;

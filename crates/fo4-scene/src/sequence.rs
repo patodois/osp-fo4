@@ -476,47 +476,49 @@ mod tests {
             raw_tail: 0..0,
             diagnostics: Vec::new(),
         };
-        Nif {
-            version: 0x1402_0007,
-            user_version: 12,
-            bs_version: 130,
-            exports: Vec::new(),
-            block_types: vec![
-                "NiControllerSequence".into(),
-                "NiTransformInterpolator".into(),
-                "NiTransformData".into(),
-            ],
-            strings: vec![b"S".to_vec(), b"part".to_vec()],
-            max_string_length: 4,
-            groups: Vec::new(),
-            roots: vec![0],
-            blocks: vec![
-                block(
-                    0,
-                    vec![
-                        field("Name", Value::StringIndex(0)),
-                        field("Interpolator", Value::Ref(1)),
-                        field("Node Name", Value::StringIndex(1)),
-                    ],
-                ),
-                block(
-                    1,
-                    vec![
-                        fl("Translation", t[0]),
-                        fl("Translation", t[1]),
-                        fl("Translation", t[2]),
-                        fl("Quaternion", f32::MIN),
-                        fl("Quaternion", f32::MIN),
-                        fl("Quaternion", f32::MIN),
-                        fl("Quaternion", f32::MIN),
-                        fl("Scale", 1.),
-                        field("Data", Value::Ref(data_link)),
-                    ],
-                ),
-                block(2, data(false)),
-            ],
-            bytes: &[],
-        }
+        fo4_nif::Nif::new(
+            fo4_nif::NifBody {
+                version: 0x1402_0007,
+                user_version: 12,
+                bs_version: 130,
+                exports: Vec::new(),
+                block_types: vec![
+                    "NiControllerSequence".into(),
+                    "NiTransformInterpolator".into(),
+                    "NiTransformData".into(),
+                ],
+                strings: vec![b"S".to_vec(), b"part".to_vec()],
+                max_string_length: 4,
+                groups: Vec::new(),
+                roots: vec![0],
+                blocks: vec![
+                    block(
+                        0,
+                        vec![
+                            field("Name", Value::StringIndex(0)),
+                            field("Interpolator", Value::Ref(1)),
+                            field("Node Name", Value::StringIndex(1)),
+                        ],
+                    ),
+                    block(
+                        1,
+                        vec![
+                            fl("Translation", t[0]),
+                            fl("Translation", t[1]),
+                            fl("Translation", t[2]),
+                            fl("Quaternion", f32::MIN),
+                            fl("Quaternion", f32::MIN),
+                            fl("Quaternion", f32::MIN),
+                            fl("Quaternion", f32::MIN),
+                            fl("Scale", 1.),
+                            field("Data", Value::Ref(data_link)),
+                        ],
+                    ),
+                    block(2, data(false)),
+                ],
+            },
+            &[],
+        )
     }
 
     #[test]

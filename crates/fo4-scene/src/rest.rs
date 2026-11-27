@@ -1288,26 +1288,28 @@ mod tests {
             ));
             blocks.push(block(5, vec![f("Controller Sequence", Value::Ref(4))]));
         }
-        Nif {
-            version: 0x14020007,
-            user_version: 12,
-            bs_version: 130,
-            exports: Vec::new(),
-            block_types: vec![
-                "BSEffectShaderProperty".into(),
-                "BSEffectShaderPropertyFloatController".into(),
-                "NiFloatInterpolator".into(),
-                "NiFloatData".into(),
-                "NiControllerSequence".into(),
-                "NiControllerManager".into(),
-            ],
-            strings: Vec::new(),
-            max_string_length: 0,
-            groups: Vec::new(),
-            roots: vec![0],
-            blocks,
-            bytes: &[],
-        }
+        fo4_nif::Nif::new(
+            fo4_nif::NifBody {
+                version: 0x14020007,
+                user_version: 12,
+                bs_version: 130,
+                exports: Vec::new(),
+                block_types: vec![
+                    "BSEffectShaderProperty".into(),
+                    "BSEffectShaderPropertyFloatController".into(),
+                    "NiFloatInterpolator".into(),
+                    "NiFloatData".into(),
+                    "NiControllerSequence".into(),
+                    "NiControllerManager".into(),
+                ],
+                strings: Vec::new(),
+                max_string_length: 0,
+                groups: Vec::new(),
+                roots: vec![0],
+                blocks,
+            },
+            &[],
+        )
     }
 
     #[test]

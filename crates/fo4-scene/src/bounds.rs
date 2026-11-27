@@ -236,37 +236,39 @@ mod tests {
             dynamic_vertices: None,
             raw_vertex_aux: Vec::new(),
         };
-        let mut n = Nif {
-            version: 0x14020007,
-            user_version: 12,
-            bs_version: 130,
-            exports: Vec::new(),
-            block_types: vec!["NiNode".into(), "BSTriShape".into()],
-            strings: Vec::new(),
-            max_string_length: 0,
-            groups: Vec::new(),
-            roots: vec![0],
-            blocks: vec![
-                fo4_nif::Block {
-                    type_index: 0,
-                    data: 0..0,
-                    decoded: Some(Data::Node {
-                        fields: av([10., 0., 0.]),
-                        children: vec![1],
-                    }),
-                    raw_tail: 0..0,
-                    diagnostics: Vec::new(),
-                },
-                fo4_nif::Block {
-                    type_index: 1,
-                    data: 0..0,
-                    decoded: Some(Data::Mesh(mesh)),
-                    raw_tail: 0..0,
-                    diagnostics: Vec::new(),
-                },
-            ],
-            bytes: &[],
-        };
+        let mut n = fo4_nif::Nif::new(
+            fo4_nif::NifBody {
+                version: 0x14020007,
+                user_version: 12,
+                bs_version: 130,
+                exports: Vec::new(),
+                block_types: vec!["NiNode".into(), "BSTriShape".into()],
+                strings: Vec::new(),
+                max_string_length: 0,
+                groups: Vec::new(),
+                roots: vec![0],
+                blocks: vec![
+                    fo4_nif::Block {
+                        type_index: 0,
+                        data: 0..0,
+                        decoded: Some(Data::Node {
+                            fields: av([10., 0., 0.]),
+                            children: vec![1],
+                        }),
+                        raw_tail: 0..0,
+                        diagnostics: Vec::new(),
+                    },
+                    fo4_nif::Block {
+                        type_index: 1,
+                        data: 0..0,
+                        decoded: Some(Data::Mesh(mesh)),
+                        raw_tail: 0..0,
+                        diagnostics: Vec::new(),
+                    },
+                ],
+            },
+            &[],
+        );
         let l = Limits::default();
         assert_eq!(
             model(&n, "synthetic", &l, &Budget::new(4096)).unwrap(),

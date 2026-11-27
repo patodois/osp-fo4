@@ -163,6 +163,112 @@ pub struct Assets<'a> {
     /// The parses [`Assets::with_decoded`] made, by kind (models,
     /// materials, textures): count and seconds ([`Assets::parses`]).
     parses: std::cell::Cell<[(u64, f64); 3]>,
+    /// Models [`Assets::with_decoded`] parsed, kept for the next read of
+    /// the same model within a cap ([`Assets::keep_models`]; none by
+    /// default).
+    models: std::cell::RefCell<ModelMemo>,
+}
+
+/// The parsed models [`Assets::keep_models`] keeps: by asset, the file's
+/// bytes, the parse, and the credits the parse charged (charged again to
+/// the reader's budget at a hit, so that the reader's account is the one a
+/// parse leaves); the least recently used first out.
+#[derive(Default)]
+struct ModelMemo {
+    cap: u64,
+    used: u64,
+    /// Bytes, parse, credits charged, the entry's size and its last stamp.
+    map: HashMap<usize, ModelEntry>,
+    order: std::collections::VecDeque<(usize, u64)>,
+    stamp: u64,
+    hits: u64,
+    parsed: u64,
+}
+struct ModelEntry {
+    bytes: std::sync::Arc<Vec<u8>>,
+    body: std::sync::Arc<fo4_nif::NifBody>,
+    charge: u64,
+    size: u64,
+    stamp: u64,
+}
+
+/// What [`Assets::keep_models`] holds: models, their counted size (file
+/// bytes and parse credits), the reads it answered and the models parsed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct KeptModels {
+    pub models: usize,
+    pub bytes: u64,
+    pub hits: u64,
+    pub parsed: u64,
+}
+
+impl ModelMemo {
+    /// The kept parse of `id`, its place refreshed.
+    fn get(
+        &mut self,
+        id: usize,
+    ) -> Option<(
+        std::sync::Arc<Vec<u8>>,
+        std::sync::Arc<fo4_nif::NifBody>,
+        u64,
+    )> {
+        self.stamp += 1;
+        let stamp = self.stamp;
+        let e = self.map.get_mut(&id)?;
+        e.stamp = stamp;
+        let out = (e.bytes.clone(), e.body.clone(), e.charge);
+        self.order.push_back((id, stamp));
+        if self.order.len() > 2 * self.map.len() + 64 {
+            let map = &self.map;
+            self.order
+                .retain(|(i, s)| map.get(i).is_some_and(|e| e.stamp == *s));
+        }
+        Some(out)
+    }
+    /// Keeps a parse when its size fits a quarter of the cap, making room
+    /// by the least recently used.
+    fn insert(
+        &mut self,
+        id: usize,
+        bytes: std::sync::Arc<Vec<u8>>,
+        body: std::sync::Arc<fo4_nif::NifBody>,
+        charge: u64,
+    ) {
+        let size = (bytes.len() as u64).saturating_add(charge);
+        if size > self.cap / 4 || self.map.contains_key(&id) {
+            return;
+        }
+        while self.used + size > self.cap {
+            if !self.evict_one() {
+                break;
+            }
+        }
+        self.used += size;
+        self.stamp += 1;
+        let stamp = self.stamp;
+        self.map.insert(
+            id,
+            ModelEntry {
+                bytes,
+                body,
+                charge,
+                size,
+                stamp,
+            },
+        );
+        self.order.push_back((id, stamp));
+    }
+    fn evict_one(&mut self) -> bool {
+        while let Some((old, s)) = self.order.pop_front() {
+            if self.map.get(&old).is_some_and(|e| e.stamp == s) {
+                if let Some(e) = self.map.remove(&old) {
+                    self.used -= e.size;
+                }
+                return true;
+            }
+        }
+        false
+    }
 }
 
 /// The files [`Assets::keep_files`] keeps: by asset, the least recently
@@ -265,6 +371,37 @@ impl<'a> Assets<'a> {
             f.order.clear();
         }
     }
+    /// Keeps the models [`Assets::with_decoded`] parses, up to `cap` in
+    /// all (a model's file bytes and the credits its parse charged; one
+    /// above a quarter of the cap is not kept; the least recently used go
+    /// first), so that a later read of the same model is not parsed again
+    /// (a caller's policy: the play window's cell loads). A read answered
+    /// from them gives the same parse of the same bytes and charges the
+    /// reader's budget what the parse charged; an error is never kept.
+    /// They are not counted in [`Assets::memory_used`]. `0`, the default,
+    /// keeps none.
+    pub fn keep_models(&mut self, cap: u64) {
+        let m = self.models.get_mut();
+        m.cap = cap;
+        while m.used > cap {
+            if !m.evict_one() {
+                break;
+            }
+        }
+        if m.map.is_empty() {
+            m.order.clear();
+        }
+    }
+    /// What [`Assets::keep_models`] holds now.
+    pub fn kept_models(&self) -> KeptModels {
+        let m = self.models.borrow();
+        KeptModels {
+            models: m.map.len(),
+            bytes: m.used,
+            hits: m.hits,
+            parsed: m.parsed,
+        }
+    }
     /// What [`Assets::keep_files`] holds now.
     /// The parses [`Assets::with_decoded`] made since these assets were
     /// built, by kind: models, materials, textures, each a count and the
@@ -301,6 +438,7 @@ impl<'a> Assets<'a> {
             clock: crate::clock::Switches::default(),
             files: Default::default(),
             parses: Default::default(),
+            models: Default::default(),
         }
     }
     pub fn resolve_path(
@@ -1127,6 +1265,20 @@ impl<'a> Assets<'a> {
             Error::new("InvalidAssetIndex", "asset graph", 0, self.nodes.len(), id)
         })?;
         let c = self.vfs.winner_bytes(&node.path)?;
+        if node.kind == AssetKind::Model {
+            let hit = {
+                let mut m = self.models.borrow_mut();
+                let hit = if m.cap > 0 { m.get(id) } else { None };
+                if hit.is_some() {
+                    m.hits += 1;
+                }
+                hit
+            };
+            if let Some((bytes, body, charge)) = hit {
+                b.charge(charge, &c.original, 0)?;
+                return f(DecodedAsset::Model(fo4_nif::Nif::shared(body, &bytes)));
+            }
+        }
         let kept = {
             let mut f = self.files.borrow_mut();
             let k = f.get(id);
@@ -1151,13 +1303,17 @@ impl<'a> Assets<'a> {
         let l = self.vfs.limits();
         let started = std::time::Instant::now();
         let parsed = match node.kind {
-            AssetKind::Model => DecodedAsset::Model(fo4_nif::Nif::read(
-                &bytes,
-                &c.original,
-                fo4_core::Game::Fallout4,
-                l,
-                b,
-            )?),
+            AssetKind::Model => {
+                let before = b.used();
+                let n = fo4_nif::Nif::read(&bytes, &c.original, fo4_core::Game::Fallout4, l, b)?;
+                let mut m = self.models.borrow_mut();
+                if m.cap > 0 {
+                    m.parsed += 1;
+                    let charge = b.used().saturating_sub(before);
+                    m.insert(id, bytes.clone(), n.body().clone(), charge);
+                }
+                DecodedAsset::Model(n)
+            }
             AssetKind::Material => {
                 DecodedAsset::Material(fo4_material::Material::read(&bytes, &c.original, l, b)?)
             }
@@ -1510,5 +1666,43 @@ mod tests {
         f.insert(7, bytes(21));
         assert!(!f.map.contains_key(&4) && f.map.contains_key(&1));
         assert!(f.used <= f.cap);
+    }
+
+    #[test]
+    fn the_model_memo_keeps_within_its_cap_least_recent_out() {
+        let body = || {
+            std::sync::Arc::new(fo4_nif::NifBody {
+                version: 0x14020007,
+                user_version: 12,
+                bs_version: 130,
+                exports: Vec::new(),
+                block_types: Vec::new(),
+                strings: Vec::new(),
+                max_string_length: 0,
+                groups: Vec::new(),
+                roots: Vec::new(),
+                blocks: Vec::new(),
+            })
+        };
+        let bytes = |n: usize| std::sync::Arc::new(vec![0u8; n]);
+        let mut m = ModelMemo {
+            cap: 100,
+            ..ModelMemo::default()
+        };
+        // A model counts its bytes and its parse's credits; one above a
+        // quarter of the cap is not kept.
+        m.insert(1, bytes(10), body(), 10);
+        m.insert(2, bytes(30), body(), 0);
+        assert_eq!((m.map.len(), m.used), (1, 20));
+        m.insert(3, bytes(20), body(), 5);
+        m.insert(4, bytes(20), body(), 5);
+        assert_eq!(m.used, 70);
+        // A read refreshes 1; the next insert past the cap drops 3.
+        assert_eq!(m.get(1).map(|(_, _, c)| c), Some(10));
+        m.insert(5, bytes(20), body(), 5);
+        m.insert(6, bytes(20), body(), 5);
+        assert!(m.map.contains_key(&1) && !m.map.contains_key(&3));
+        assert!(m.used <= m.cap);
+        assert!(m.get(3).is_none());
     }
 }

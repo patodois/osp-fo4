@@ -2,7 +2,7 @@ use crate::{boolean, geometry, reference, sized, string_index, Mesh};
 use fo4_core::{add, limit, mul, range, Budget, Cursor, Error, Limits, Result};
 use serde::Serialize;
 use std::ops::Range;
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Value {
     U32(u32),
     U64(u64),
@@ -14,13 +14,13 @@ pub enum Value {
     Bytes(Vec<u8>),
     Raw(Range<usize>),
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Field {
     pub name: &'static str,
     pub offset: u64,
     pub value: Value,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Data {
     Node {
         fields: Vec<Field>,

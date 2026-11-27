@@ -60,46 +60,48 @@ fn model(undecoded_controller: bool) -> Nif<'static> {
         ]))
     };
     let fields = |f: Vec<Field>| Some(Data::Fields(f));
-    Nif {
-        version: 0x1402_0007,
-        user_version: 12,
-        bs_version: 130,
-        exports: Vec::new(),
-        block_types: TYPES.iter().map(|t| (*t).into()).collect(),
-        strings: vec![
-            b"root".to_vec(),
-            b"moved".to_vec(),
-            b"seq".to_vec(),
-            b"shape".to_vec(),
-        ],
-        max_string_length: 5,
-        groups: Vec::new(),
-        roots: vec![0],
-        blocks: vec![
-            block(0, 0, node(0, vec![1, 4, 6, 8, 11])),
-            block(1, 1, shape(-1)),
-            block(2, 2, fields(vec![reference("Texture Set", 3)])),
-            block(3, 3, fields(Vec::new())),
-            block(4, 1, shape(5)),
-            block(5, 4, None),
-            block(6, 0, node(1, vec![7])),
-            block(7, 1, shape(-1)),
-            block(8, 5, fields(vec![reference("Shader Property", 2)])),
-            block(
-                9,
-                6,
-                (!undecoded_controller).then(|| Data::Fields(vec![reference("Target", 6)])),
-            ),
-            block(
-                10,
-                7,
-                fields(vec![field("Node Name", Value::StringIndex(2))]),
-            ),
-            block(11, 0, node(2, vec![12])),
-            block(12, 1, shape(-1)),
-        ],
-        bytes: &[],
-    }
+    fo4_nif::Nif::new(
+        fo4_nif::NifBody {
+            version: 0x1402_0007,
+            user_version: 12,
+            bs_version: 130,
+            exports: Vec::new(),
+            block_types: TYPES.iter().map(|t| (*t).into()).collect(),
+            strings: vec![
+                b"root".to_vec(),
+                b"moved".to_vec(),
+                b"seq".to_vec(),
+                b"shape".to_vec(),
+            ],
+            max_string_length: 5,
+            groups: Vec::new(),
+            roots: vec![0],
+            blocks: vec![
+                block(0, 0, node(0, vec![1, 4, 6, 8, 11])),
+                block(1, 1, shape(-1)),
+                block(2, 2, fields(vec![reference("Texture Set", 3)])),
+                block(3, 3, fields(Vec::new())),
+                block(4, 1, shape(5)),
+                block(5, 4, None),
+                block(6, 0, node(1, vec![7])),
+                block(7, 1, shape(-1)),
+                block(8, 5, fields(vec![reference("Shader Property", 2)])),
+                block(
+                    9,
+                    6,
+                    (!undecoded_controller).then(|| Data::Fields(vec![reference("Target", 6)])),
+                ),
+                block(
+                    10,
+                    7,
+                    fields(vec![field("Node Name", Value::StringIndex(2))]),
+                ),
+                block(11, 0, node(2, vec![12])),
+                block(12, 1, shape(-1)),
+            ],
+        },
+        &[],
+    )
 }
 
 fn blocker(code: &str, offset: u64, found: &str) -> Error {

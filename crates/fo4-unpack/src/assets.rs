@@ -69,8 +69,9 @@ pub(super) fn sweep(m: &Manifest, r: &mut Reports, scope: &str) -> Result<()> {
                     r.hist(format!("nif.bs_version.{}", n.bs_version))?;
                     r.summary.blocks += n.blocks.len() as u64;
                     r.summary.uninterpreted_fields += n.groups.len() as u64;
-                    for block in &mut n.blocks {
-                        let name = &n.block_types[block.type_index as usize];
+                    let body: &mut fo4_nif::NifBody = &mut n;
+                    for block in &mut body.blocks {
+                        let name = &body.block_types[block.type_index as usize];
                         r.hist(format!("nif.block.{name}"))?;
                         if block.decoded.is_none() {
                             r.summary.raw_blocks += 1;
@@ -94,7 +95,7 @@ pub(super) fn sweep(m: &Manifest, r: &mut Reports, scope: &str) -> Result<()> {
                             {
                                 for field in fields.iter().filter(|f| f.name == "Name") {
                                     if let fo4_nif::Value::StringIndex(i) = field.value {
-                                        if let Some(path) = n.strings.get(i as usize) {
+                                        if let Some(path) = body.strings.get(i as usize) {
                                             let tail = &path[path.len().saturating_sub(5)..];
                                             if tail.eq_ignore_ascii_case(b".bgsm")
                                                 || tail.eq_ignore_ascii_case(b".bgem")
