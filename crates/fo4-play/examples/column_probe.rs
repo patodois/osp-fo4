@@ -13,6 +13,9 @@
 //! column_probe MANIFEST --platform REF SEQUENCE SECONDS
 //! ```
 //!
+//! CELL may also be `WORLDSPACE@` (a worldspace's key and `@`): the cell of
+//! that worldspace whose grid square holds (X, Y).
+//!
 //! The second form prints each rigid part of a named platform
 //! (`play_elevator_rigid_v1`): its collision box as stored, at SECONDS of
 //! SEQUENCE and at the last key of each sequence.
@@ -116,9 +119,17 @@ fn run() -> Result<(), E> {
         .map(|x| x.parse::<f64>())
         .collect::<Result<_, _>>()?;
     let (a, z, b, r) = ([n[0], n[1]], n[2], [n[3], n[4]], n[5]);
-    let cell = fo4_vm::player::parse_key(&rest[1]).ok_or(usage)?;
     let m = Manifest::load(Path::new(&rest[0]))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+    let cell = match rest[1].strip_suffix('@') {
+        Some(space) => {
+            let space = fo4_vm::player::parse_key(space).ok_or(usage)?;
+            let b = Budget::new(m.limits.max_memory);
+            fo4_play::world::start_cell(&store, &space, [a[0], a[1], z], &b)?
+        }
+        None => fo4_vm::player::parse_key(&rest[1]).ok_or(usage)?,
+    };
+    println!("cell {}", key(&cell));
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let built = fo4_play::world::build(&m, &store, &vfs, &cell, play.world_options())?;
     println!("{}", built.report);
