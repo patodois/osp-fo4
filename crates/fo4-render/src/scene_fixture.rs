@@ -1420,6 +1420,58 @@ fn a_head_part_refused_after_a_drawn_shape_leaves_no_entry_behind() {
     assert_eq!(recorded[0].mesh, with.list.draws[0].mesh);
 }
 
+/// code-5a R3: actors sharing a model and skeleton share its mesh, and the
+/// posed positions of the shared mesh are neither computed nor charged
+/// again for each of them.
+#[test]
+fn actors_sharing_a_mesh_are_not_charged_its_posed_positions_each() {
+    use crate::fixture::{skinned_files_with, Skinned};
+    let vertices = 3000u16;
+    let (body, _) = skinned_files_with(
+        12.,
+        Skinned {
+            vertices,
+            ..Skinned::default()
+        },
+    );
+    let (_temp, m) = actor_cell("render-shared-mesh", body, Vec::new());
+    let b = Budget::new(64 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticActorCell", &b).unwrap();
+    let mut used = |count: usize| {
+        let mut actors = fo4_scene::actor::resolve(&scene, &mut loader, &b).unwrap();
+        for _ in 1..count {
+            let more = fo4_scene::actor::resolve(&scene, &mut loader, &b).unwrap();
+            actors.actors.extend(more.actors);
+        }
+        let budget = Budget::new(64 << 20);
+        let with = crate::draw::build_with_actors(
+            &scene,
+            &actors,
+            &loader,
+            &m.limits,
+            BuildOptions::reference(RuleLevel::Hypotheses),
+            &budget,
+        )
+        .unwrap();
+        assert!(with.omitted.is_empty(), "{:?}", with.omitted);
+        assert_eq!(with.list.draws.len(), count);
+        assert_eq!(with.list.meshes.len(), 1);
+        assert_eq!(with.list.meshes[0].vertices.len(), usize::from(vertices));
+        budget.used()
+    };
+    let one = used(1);
+    let three = used(3);
+    // Each further actor costs its identity and draw, not 24 bytes a vertex.
+    let each = (three - one) / 2;
+    assert!(
+        each < 24 * u64::from(vertices),
+        "{each} bytes for each further actor"
+    );
+}
+
 /// One placed effect model (`nif_kind` with Shader Flags 1 `flags`, its
 /// Base Color Scale 2 replaced by `scale`), loaded at the hypotheses level,
 /// its state given `nif_controller_rest_effect_first_key_v1` as a settled

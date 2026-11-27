@@ -1802,7 +1802,7 @@ impl Builder<'_, '_> {
         i: usize,
         m: &fo4_nif::Mesh,
         surface: &Surface,
-        skinned: Option<(usize, &[[f64; 3]])>,
+        skinned: Option<(usize, &dyn Fn() -> Result<Vec<[f64; 3]>>)>,
     ) -> Result<usize> {
         let model = self.asset(AssetKind::Model, path)?;
         let key = (
@@ -1820,7 +1820,16 @@ impl Builder<'_, '_> {
             }
             return Ok(index);
         }
-        if skinned.is_some_and(|(_, p)| m.vertices.as_ref().is_none_or(|v| v.len() != p.len())) {
+        // A skinned shape's posed positions, computed only for a mesh not
+        // yet kept.
+        let posed = match skinned {
+            Some((_, positions)) => Some(positions()?),
+            None => None,
+        };
+        if posed
+            .as_ref()
+            .is_some_and(|p| m.vertices.as_ref().is_none_or(|v| v.len() != p.len()))
+        {
             return Err(error("RenderSkinnedVertexCount", "mesh", 0, i));
         }
         if m.dynamic_vertices.is_some() {
@@ -1911,8 +1920,8 @@ impl Builder<'_, '_> {
         }
         let mut bad_uv: Vec<bool> = Vec::new();
         for (k, v) in vertices.iter().enumerate() {
-            let position = match skinned {
-                Some((_, p)) => p[k],
+            let position = match &posed {
+                Some(p) => p[k],
                 None => v
                     .position
                     .ok_or_else(|| error("MissingRenderPosition", "mesh", 0, i))?
@@ -2814,13 +2823,12 @@ impl Builder<'_, '_> {
                         (true, false) => MissingBones::Identity,
                         (true, true) => MissingBones::Nearest,
                     };
+                    // The bone matrices and posed positions are working
+                    // values: charged to a scope released after the shape,
+                    // the positions computed only for a mesh not yet kept.
+                    let scratch = self.budget.child();
                     let (matrices, missing) = fo4_scene::actor::pose::bone_matrices_missing(
-                        n,
-                        &skin,
-                        pose,
-                        &file,
-                        mode,
-                        self.budget,
+                        n, &skin, pose, &file, mode, &scratch,
                     )?;
                     if missing > 0 {
                         let mut rules = vec![fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND];
@@ -2833,13 +2841,8 @@ impl Builder<'_, '_> {
                             }
                         }
                     }
-                    let positions = fo4_scene::actor::pose::skin_positions(
-                        n,
-                        i,
-                        &matrices,
-                        &file,
-                        self.budget,
-                    )?;
+                    let positions =
+                        || fo4_scene::actor::pose::skin_positions(n, i, &matrices, &file, &scratch);
                     if self.options.refraction_left_out
                         && refraction_surface(n, f)
                         && self.draw_rule(fo4_scene::hypotheses::LIGHTING_REFRACTION_LEFT_OUT)?
