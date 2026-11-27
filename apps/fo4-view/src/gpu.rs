@@ -1154,6 +1154,14 @@ fn follow_sky(
 ///
 /// It carries its actor's reference and place and its spawned translation
 /// ([`ride_cast`] with `--draw-cast-on-platforms`, [`watch_play`]).
+/// An entity of the cell before a load of another space, drawn until the
+/// walker stands in the new cell ([`PlayDrawn::leaving`]): the scripted
+/// play's per-frame work (live world, platforms, doors, cast, exposure)
+/// passes it by.
+#[cfg(feature = "script-event")]
+#[derive(Component)]
+struct Leaving;
+
 #[cfg(feature = "script-event")]
 #[derive(Component)]
 struct CastEntity {
@@ -1321,11 +1329,21 @@ fn spawn_window_scene(world: &mut World) {
         world.entity_mut(e).insert(WindowSky);
     }
     // The scripted play window's cell before, drawn until now.
+    // A load of another space keeps them drawn until the walker stands
+    // in the new cell ([`PlayDrawn::leaving`]).
     #[cfg(feature = "script-event")]
     {
         let old = world
             .get_resource_mut::<Playing>()
-            .map(|mut p| std::mem::take(&mut p.2.old))
+            .map(|mut p| {
+                let old = std::mem::take(&mut p.2.old);
+                if p.2.leaving_for.is_some() {
+                    p.2.leaving.extend(old);
+                    Vec::new()
+                } else {
+                    old
+                }
+            })
             .unwrap_or_default();
         for e in old {
             if let Ok(e) = world.get_entity_mut(e) {
@@ -2093,6 +2111,32 @@ struct PlayDrawn {
     /// or [`CAST_REVEAL_WAIT`] passes (viewer policy): its scene, its
     /// load, since when, and whether the cast came.
     held: Option<(PendingScene, crate::play::Loaded, std::time::Instant, bool)>,
+    /// The entities of the cell before a load of another space, kept
+    /// drawn after the new cell spawns until the walker stands in that
+    /// cell (`spawn_window_scene` moves them here from `old`;
+    /// [`play_scripted`] despawns them), with the loaded cell and since
+    /// when: the walker's new feet reach the window only once the run goes
+    /// on, so until then the camera stands at the old eye.
+    leaving: Vec<Entity>,
+    leaving_for: Option<(fo4_plugin::FormKey, std::time::Instant)>,
+}
+
+/// Wall seconds the cell before a load of another space stays drawn
+/// after the new one spawns at most, waiting for the walker to stand in
+/// the new cell (viewer policy).
+#[cfg(feature = "script-event")]
+const LEAVING_MAX: f64 = 2.0;
+
+/// Whether the cell before a load of another space goes: the walker
+/// stands in the loaded cell (`walker`), or it waited [`LEAVING_MAX`]
+/// wall seconds.
+#[cfg(feature = "script-event")]
+fn leaving_done(
+    walker: Option<&fo4_plugin::FormKey>,
+    loaded: &fo4_plugin::FormKey,
+    waited: f64,
+) -> bool {
+    walker == Some(loaded) || waited >= LEAVING_MAX
 }
 
 /// Wall seconds a loaded cell of another space waits for its cast before
@@ -2122,6 +2166,30 @@ struct PlayShots {
     last: bool,
     /// The frames being encoded and written on their own threads.
     writing: Vec<std::thread::JoinHandle<()>>,
+    /// `FO4_VIEW_HOLD_SHOTS=SECONDS` (measurement only): while the scene
+    /// is not ready (a load, its cast, its upload) a frame every SECONDS
+    /// of wall time, named by the run's second and a count
+    /// (`tSECONDS-hNNN.jpg`): what the viewport shows while the clock
+    /// stands. The name of the frame asked, the last asked, the count.
+    hold_name: Option<String>,
+    hold_last: Option<std::time::Instant>,
+    hold_n: u32,
+    /// With `FO4_VIEW_HOLD_SHOTS`: frames are written that way too until
+    /// this second of the run, one second past the end of each load (what
+    /// the viewport shows as the new space starts), and whether a load
+    /// ended this frame.
+    after_until: f64,
+    after_load: bool,
+}
+
+/// `FO4_VIEW_HOLD_SHOTS`: wall seconds between frames written while the
+/// scripted window's scene is not ready (measurement only; unset, none).
+#[cfg(feature = "script-event")]
+fn hold_shot_every() -> Option<f64> {
+    std::env::var("FO4_VIEW_HOLD_SHOTS")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|v| v.is_finite() && *v > 0.0)
 }
 
 /// With `--play-live-world`, when the live world changed (and once the
@@ -3549,8 +3617,8 @@ fn play_scripted(
     mut readout: ResMut<Readout>,
     pending: Option<Res<PendingScene>>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
-    mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
-    mut casts: Query<(Entity, &CastEntity, &mut Transform), Without<FlyCamera>>,
+    mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>, Without<Leaving>)>,
+    mut casts: Query<(Entity, &CastEntity, &mut Transform), (Without<FlyCamera>, Without<Leaving>)>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
     (mut doors, mut leaves, mut skins, mut meshes): FollowParams,
     (mut exposure, lights, mut buffers): ExposureParams,
@@ -3564,11 +3632,23 @@ fn play_scripted(
             // The cell before stays drawn until the new one is spawned
             // (`spawn_window_scene`); its cast too while the new cell lies
             // in the same worldspace, else it goes with its cell.
+            // A cell before an earlier load still drawn goes now.
+            for e in std::mem::take(&mut drawn.leaving) {
+                commands.entity(e).try_despawn();
+            }
+            drawn.leaving_for = None;
             let n = instances.iter().count();
             drawn.old.extend(instances.iter().map(|x| x.0));
             if !r.keep_cast {
                 drawn.old.extend(casts.iter().map(|x| x.0));
                 commands.remove_resource::<PendingCast>();
+                // Another space: the cell before stays drawn past the new
+                // one's spawn, until the walker stands in it (viewer
+                // policy: the old view held, not an empty one).
+                for e in &drawn.old {
+                    commands.entity(*e).try_insert(Leaving);
+                }
+                drawn.leaving_for = Some((r.cell.clone(), std::time::Instant::now()));
             }
             println!(
                 "play: cell {} loaded in {:.2} s (asked at {:.3} s of the run); {n} drawn instances of the cell before removed as it is drawn{}",
@@ -3640,12 +3720,40 @@ fn play_scripted(
             drawn.uploading = None;
             // The new scene's instances take the live world's decisions.
             drawn.applied = None;
+            drawn.shots.after_load = true;
             ready = true;
         }
     }
     let Some(seen) = p.seen() else {
         return;
     };
+    // The cell before a load of another space: despawned once the walker
+    // stands in the new cell (the camera follows it there this frame), or
+    // after LEAVING_MAX wall seconds.
+    if let Some((cell, since)) = &drawn.leaving_for {
+        if !drawn.leaving.is_empty()
+            && leaving_done(seen.cell.as_ref(), cell, since.elapsed().as_secs_f64())
+        {
+            println!(
+                "play: the cell before despawned at {:.3} s of the run, {:.2} s after the load returned ({} entities; the walker {})",
+                seen.t,
+                since.elapsed().as_secs_f64(),
+                drawn.leaving.len(),
+                if seen.cell.as_ref() == Some(cell) {
+                    "stands in the new cell"
+                } else {
+                    "not yet in the new cell: waited too long"
+                }
+            );
+            for e in std::mem::take(&mut drawn.leaving) {
+                commands.entity(e).try_despawn();
+            }
+            drawn.leaving_for = None;
+        }
+    }
+    if std::mem::take(&mut drawn.shots.after_load) {
+        drawn.shots.after_until = seen.t + 1.0;
+    }
     if ready {
         if let Some(cell) = p.cell_wanted(&seen) {
             p.load(cell, seen.t, &seen);
@@ -3781,7 +3889,10 @@ fn play_scripted(
         if let Some((at, s)) = &shots.asked {
             let image = shots.captured.lock().ok().and_then(|mut c| c.take());
             if let Some(image) = image {
-                let file = format!("{dir}/t{at:07.1}.jpg");
+                let file = match shots.hold_name.take() {
+                    Some(n) => format!("{dir}/{n}"),
+                    None => format!("{dir}/t{at:07.1}.jpg"),
+                };
                 let root = p.data_root().map(std::path::PathBuf::from);
                 let (at, s) = (*at, s.clone());
                 // Encoded and written on a thread of its own (viewer
@@ -3848,6 +3959,29 @@ fn play_scripted(
             shots.next = p
                 .next_shot(seen.t)
                 .unwrap_or(((seen.t / every).floor() + 1.0) * every);
+        } else if let Some(period) = hold_shot_every().filter(|_| {
+            (!ready || seen.t < shots.after_until)
+                && seen.feet.is_some()
+                && seen.done.is_none()
+                && p.play_from_pending().is_none()
+        }) {
+            if shots
+                .hold_last
+                .is_none_or(|l| l.elapsed().as_secs_f64() >= period)
+            {
+                let slot = shots.captured.clone();
+                commands.spawn(Screenshot::primary_window()).observe(
+                    move |shot: On<ScreenshotCaptured>| {
+                        if let Ok(mut slot) = slot.lock() {
+                            *slot = Some(shot.event().image.clone());
+                        }
+                    },
+                );
+                shots.hold_n += 1;
+                shots.hold_name = Some(format!("t{:07.1}-h{:03}.jpg", seen.t, shots.hold_n));
+                shots.hold_last = Some(std::time::Instant::now());
+                shots.asked = Some((seen.t, seen.clone()));
+            }
         }
     }
     if let Some(done) = &seen.done {
@@ -4217,7 +4351,7 @@ impl FrameLog {
         use std::io::Write;
         let _ = writeln!(
             out,
-            "frame\tunix_s\tinterval_ms\tupdate_ms\tcells\tuploading\tentities\tphase\tx\ty"
+            "frame\tunix_s\tinterval_ms\tupdate_ms\tcells\tuploading\tentities\tphase\tx\ty\tz"
         );
         Self {
             out,
@@ -4258,12 +4392,13 @@ fn frame_end(world: &mut World) {
         _ => "-".into(),
     };
     let line = format!(
-        "{}\t{unix:.3}\t{}\t{}\t{cells}\t{uploading}\t{entities}\t{phase}\t{:.1}\t{:.1}",
+        "{}\t{unix:.3}\t{}\t{}\t{cells}\t{uploading}\t{entities}\t{phase}\t{:.1}\t{:.1}\t{:.1}",
         log.frame,
         ms(log.previous, log.begin),
         ms(log.begin, Some(now)),
         point[0],
         point[1],
+        point[2],
     );
     log.frame += 1;
     use std::io::Write;
@@ -4517,6 +4652,24 @@ mod tests {
                 assert!(!call.contains("world_position"), "{call}");
             }
         }
+    }
+
+    /// The cell before a load of another space stays drawn until the
+    /// walker stands in the loaded cell (the 24th session's A: for ten
+    /// frames after the lower shaft spawned the camera still stood at the
+    /// upper shaft's eye, with the upper shaft already gone: a black view),
+    /// or until it waited two wall seconds.
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_cell_before_another_space_stays_until_the_walker_stands_in_the_new_one() {
+        let k = |id: u32| fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: id,
+        };
+        assert!(!leaving_done(Some(&k(1)), &k(2), 0.1));
+        assert!(!leaving_done(None, &k(2), 0.1));
+        assert!(leaving_done(Some(&k(2)), &k(2), 0.0));
+        assert!(leaving_done(Some(&k(1)), &k(2), LEAVING_MAX));
     }
 
     #[test]
