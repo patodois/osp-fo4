@@ -338,3 +338,29 @@ fn every_owned_copy_of_a_shared_text_is_charged() {
     let e = Machine::read(&c, "synthetic.hkx", 0, &Budget::new(64 << 20)).unwrap_err();
     assert_eq!(e.code, "UnsupportedBehaviorRoot");
 }
+
+#[test]
+fn a_long_table_is_looked_up_without_a_scan_per_entry() {
+    // An event list of the most entries a machine is read with, each its
+    // own first-table entry: one lookup per element used to scan the
+    // whole table.
+    use crate::fixture::Objects;
+    let n = MAX_ENTRIES as usize;
+    let mut o = Objects::new();
+    let strings = o.object(GRAPH_STRINGS, 32 + 8 * n + 16);
+    o.array(strings, 16, n as u32, 32);
+    for i in 0..n {
+        o.text(strings, 32 + 8 * i, 32 + 8 * n, "e");
+    }
+    let bytes = o.file();
+    let b = Budget::new(64 << 20);
+    let c = Container::read(&bytes, "synthetic.hkx", 0, &b).unwrap();
+    let t = std::time::Instant::now();
+    let events = graph_events(&c, 0, "synthetic.hkx", 0, &b).unwrap();
+    let took = t.elapsed();
+    assert_eq!(events.len(), n);
+    assert!(events.iter().all(|e| *e == b"e"));
+    // A scan per entry is about two billion comparisons; the index takes
+    // a few milliseconds.
+    assert!(took < std::time::Duration::from_secs(1), "{took:?}");
+}

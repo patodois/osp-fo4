@@ -216,6 +216,15 @@ pub struct Container<'a> {
     pub objects: Vec<Object<'a>>,
     /// Bytes of 0xff after the last entry of `__classnames__` and of each data table.
     pub fill: [u32; 4],
+    /// Indexes into `pointers` ordered by source, into `pointers` ordered
+    /// by destination, and into `object_pointers` ordered by source (table
+    /// order among equals): the typed views' lookups, built by `read`.
+    #[serde(skip)]
+    by_source: Vec<u32>,
+    #[serde(skip)]
+    by_destination: Vec<u32>,
+    #[serde(skip)]
+    links_by_source: Vec<u32>,
 }
 
 struct Ctx<'a, 'b> {
@@ -619,6 +628,16 @@ impl<'a> Container<'a> {
                 ),
             ));
         }
+        let order = |n: usize, key: &dyn Fn(usize) -> u32| -> Result<Vec<u32>> {
+            let mut v: Vec<u32> = Vec::new();
+            c.b.reserve(&mut v, n, file, base.saturating_add(d as u64))?;
+            v.extend((0..n).map(|i| i as u32));
+            v.sort_by_key(|&i| (key(i as usize), i));
+            Ok(v)
+        };
+        let by_source = order(pointers.len(), &|i| pointers[i].source)?;
+        let by_destination = order(pointers.len(), &|i| pointers[i].destination)?;
+        let links_by_source = order(object_pointers.len(), &|i| object_pointers[i].source)?;
         Ok(Self {
             bytes,
             header,
@@ -630,7 +649,44 @@ impl<'a> Container<'a> {
             object_pointers,
             objects,
             fill: [names_fill, f1, f2, f3],
+            by_source,
+            by_destination,
+            links_by_source,
         })
+    }
+
+    /// The first-table entry with this source, the first in table order
+    /// when several share it.
+    pub(crate) fn pointer_from(&self, source: usize) -> Option<&Pointer> {
+        let s = u32::try_from(source).ok()?;
+        let k = self
+            .by_source
+            .partition_point(|&i| self.pointers[i as usize].source < s);
+        let p = &self.pointers[*self.by_source.get(k)? as usize];
+        (p.source == s).then_some(p)
+    }
+    /// The second-table entry with this source, the first in table order
+    /// when several share it.
+    pub(crate) fn link_from(&self, source: usize) -> Option<&ObjectPointer> {
+        let s = u32::try_from(source).ok()?;
+        let k = self
+            .links_by_source
+            .partition_point(|&i| self.object_pointers[i as usize].source < s);
+        let l = &self.object_pointers[*self.links_by_source.get(k)? as usize];
+        (l.source == s).then_some(l)
+    }
+    /// The first in table order of the first-table entries whose
+    /// destination lies after `lo` and before `hi`.
+    pub(crate) fn pointer_into(&self, lo: u32, hi: u64) -> Option<&Pointer> {
+        let k = self
+            .by_destination
+            .partition_point(|&i| self.pointers[i as usize].destination <= lo);
+        self.by_destination[k..]
+            .iter()
+            .map(|&i| i as usize)
+            .take_while(|&i| (self.pointers[i].destination as u64) < hi)
+            .min()
+            .map(|i| &self.pointers[i])
     }
 
     /// The `__data__` section; always present after `read`.

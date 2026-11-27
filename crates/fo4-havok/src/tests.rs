@@ -387,3 +387,33 @@ fn variant_errors_are_named() {
     put(&mut b, 100, 256);
     assert_eq!(code(&b), ("InvalidHavokSectionBounds".into(), 1100));
 }
+
+#[test]
+fn indexed_lookups_answer_as_the_first_entry_in_table_order() {
+    // Two first-table entries share a source (the later destination stored
+    // first) and two second-table entries share one too: the lookups give
+    // the first of each in table order, as a scan of the table does.
+    let mut s = spec();
+    s.pointers = vec![[0x48, 0x58], [0x10, 0x20], [0x48, 0x50]];
+    s.links = vec![[0x18, 2, 0x30], [0x08, 2, 0x30], [0x18, 2, 0]];
+    let bytes = build(&s);
+    let c = read(&bytes).unwrap();
+    for source in 0..0x60 {
+        let scan = c.pointers.iter().find(|p| p.source as usize == source);
+        assert_eq!(c.pointer_from(source), scan, "{source}");
+        let scan = c
+            .object_pointers
+            .iter()
+            .find(|p| p.source as usize == source);
+        assert_eq!(c.link_from(source), scan, "{source}");
+    }
+    assert_eq!(c.pointer_from(0x48).map(|p| p.destination), Some(0x58));
+    assert_eq!(c.link_from(0x18).map(|p| p.destination), Some(0x30));
+    for (lo, hi) in [(0x10, 0x60), (0x50, 0x60), (0x20, 0x50), (0x58, 0x60)] {
+        let scan = c
+            .pointers
+            .iter()
+            .find(|p| p.destination > lo && (p.destination as u64) < hi);
+        assert_eq!(c.pointer_into(lo, hi), scan, "{lo} {hi}");
+    }
+}

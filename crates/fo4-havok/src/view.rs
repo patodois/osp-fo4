@@ -153,11 +153,7 @@ impl<'a, 'c> View<'a, 'c> {
     /// Object index named by the second-table entry whose source is `field`.
     pub fn link(&self, field: usize) -> Option<usize> {
         let source = (self.span.offset as usize).checked_add(field)?;
-        let l = self
-            .c
-            .object_pointers
-            .iter()
-            .find(|l| l.source as usize == source)?;
+        let l = self.c.link_from(source)?;
         self.c
             .objects
             .binary_search_by_key(&l.destination, |o| o.offset)
@@ -177,11 +173,7 @@ impl<'a, 'c> View<'a, 'c> {
     /// entry whose source is `field`.
     pub fn pointer(&self, field: usize) -> Option<usize> {
         let source = (self.span.offset as usize).checked_add(field)?;
-        let p = self
-            .c
-            .pointers
-            .iter()
-            .find(|p| p.source as usize == source)?;
+        let p = self.c.pointer_from(source)?;
         (p.destination as usize).checked_sub(self.span.offset as usize)
     }
     /// The NUL-terminated bytes that the first-table entry with source
@@ -222,12 +214,7 @@ impl<'a, 'c> View<'a, 'c> {
         let lo = self.span.offset;
         let hi = self.span.end;
         let source = lo as usize + field;
-        let dest = self
-            .c
-            .pointers
-            .iter()
-            .find(|p| p.source as usize == source)
-            .map(|p| p.destination);
+        let dest = self.c.pointer_from(source).map(|p| p.destination);
         let storage = match (count, dest) {
             (0, None) => {
                 return Ok(Array {
@@ -263,12 +250,7 @@ impl<'a, 'c> View<'a, 'c> {
         }
         // A destination inside [storage, end) lies in this span, so the
         // container guarantees that this object owns it.
-        if let Some(p) = self
-            .c
-            .pointers
-            .iter()
-            .find(|p| p.destination > storage && (p.destination as u64) < end)
-        {
+        if let Some(p) = self.c.pointer_into(storage, end) {
             return Err(self.err(
                 field + 8,
                 format!("{count} elements of {element} bytes before the next storage block"),
