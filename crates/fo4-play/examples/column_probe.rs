@@ -307,9 +307,11 @@ fn run() -> Result<(), E> {
     // As the walking world's build reads them: the cells about it and,
     // with `--play-collision-persistent`, the worldspace's persistent
     // references in the loaded squares.
+    let mut joined_from = None;
     if wo.around > 0 {
         let a = fo4_scene::grid::around(&store, &scene.cell.key, wo.around, &budget)?;
         fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
+        joined_from = Some(scene.instances.len());
         if wo.persistent && a.searched {
             let j = fo4_scene::grid::absorb_persistent(&mut loader, &mut scene, &a, &budget)?;
             println!("\n# persistent references joined: {j:?}");
@@ -367,6 +369,53 @@ fn run() -> Result<(), E> {
     };
     for i in &scene.instances {
         show(i, "instance");
+    }
+    // COLUMN_PROBE_PERSISTENT=1: every persistent reference the build
+    // joined (`--play-collision-persistent`), one line each: base and
+    // signature, model, whether its collision is in the walking world, the
+    // drawing's readiness as the loader gives it (no draw switch of the
+    // window applied), editor marker, enable state and stored place.
+    if std::env::var_os("COLUMN_PROBE_PERSISTENT").is_some() {
+        println!("\n# persistent\tref\tbase\tsig\tmodel\tin world\trender\teditor marker\tenabled\tplace\tblockers");
+        for i in &scene.instances[joined_from.unwrap_or(scene.instances.len())..] {
+            let base = i.base.as_ref();
+            let render = match &i.state {
+                fo4_scene::State::Blocked => "blocked".to_string(),
+                s => format!("{s:?}")
+                    .split([' ', '{'])
+                    .next()
+                    .unwrap_or("")
+                    .to_string(),
+            };
+            let codes: BTreeSet<String> = i
+                .blockers
+                .iter()
+                .map(|e| {
+                    format!(
+                        "{} {}",
+                        e.code,
+                        e.found.chars().take(40).collect::<String>()
+                    )
+                })
+                .collect();
+            println!(
+                "persistent\t{}\t{}\t{}\t{:?}\t{}\t{render}\t{}\t{:?}\t{:?}\t{}",
+                key(&i.reference.key),
+                base.map(|b| key(&b.key)).unwrap_or_default(),
+                base.map(|b| String::from_utf8_lossy(&b.record.signature).into_owned())
+                    .unwrap_or_default(),
+                base.and_then(|b| b.common.model.path.clone())
+                    .unwrap_or_default(),
+                in_world.contains(&i.reference.key),
+                i.editor_marker,
+                i.enable.as_ref().map(|p| p.enabled),
+                i.reference
+                    .data
+                    .transform
+                    .map(|t| [t[0], t[1], t[2]].map(|v| v.round())),
+                codes.into_iter().collect::<Vec<_>>().join("; "),
+            );
+        }
     }
     // COLUMN_PROBE_CENSUS=SIGNATURES (comma separated, for example
     // FURN,MSTT): every placement of those bases whose object bounds meet
