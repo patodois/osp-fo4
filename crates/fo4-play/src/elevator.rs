@@ -158,6 +158,8 @@ pub struct Elevator {
     rides: Vec<Ride<Key>>,
     /// The run's started sequences read so far.
     seen: usize,
+    /// The second the run last started a sequence on the reference.
+    started_at: Option<f64>,
     /// The last second the rides were advanced to.
     last: f64,
     /// What happened: (second, text).
@@ -786,6 +788,7 @@ impl Elevator {
             groups,
             rides: Vec::new(),
             seen: 0,
+            started_at: None,
             last: 0.0,
             log: Vec::new(),
             ended: None,
@@ -927,6 +930,7 @@ impl Elevator {
                 continue;
             }
             any = true;
+            self.started_at = Some(self.started_at.map_or(*t, |s| s.max(*t)));
             let mut moved = 0;
             for n in &mut self.nodes {
                 let here = sample(&n.track, *t);
@@ -1146,6 +1150,13 @@ pub struct Platform {
     /// still to come (after [`Platform::second`]): the parts move until
     /// then and stand from then on. `None`: nothing moves after `second`.
     pub moves_until: Option<f64>,
+    /// The second the run last started a sequence on it, if it did.
+    pub started: Option<f64>,
+    /// Whether the run started that sequence at or after an activation of
+    /// a reference by the walker, with no change of space between
+    /// ([`crate::walker::Walker::platforms`]; `false` from
+    /// [`Elevator::platform`]): the move the person's activation set off.
+    pub after_activation: bool,
 }
 
 impl Platform {
@@ -1243,6 +1254,8 @@ impl Elevator {
             second: t,
             parts,
             moves_until: moves_until.filter(|e| *e > t),
+            started: self.started_at,
+            after_activation: false,
         }
     }
 }
@@ -1369,6 +1382,7 @@ mod tests {
             }],
             rides: Vec::new(),
             seen: 0,
+            started_at: None,
             last: 0.0,
             log: Vec::new(),
             ended: None,

@@ -2033,6 +2033,8 @@ mod tests {
                 },
             ],
             moves_until: None,
+            started: None,
+            after_activation: false,
         };
         let d = PlatformInstance {
             instance: 0,
@@ -2425,6 +2427,8 @@ mod tests {
                 },
             ],
             moves_until: None,
+            started: None,
+            after_activation: false,
         };
         // Standing on nothing, or not riding: no cut.
         assert_eq!(ride_cut(&[]), None);
@@ -2512,6 +2516,8 @@ mod tests {
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
                 moves_until: None,
+                started: None,
+                after_activation: false,
             }]
         };
         let place = [10.0, 20.0, 8925.06];
@@ -2565,6 +2571,8 @@ mod tests {
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
                 moves_until: None,
+                started: None,
+                after_activation: false,
             }]
         };
         let place = [10.0, 20.0, 8925.06];
@@ -2744,6 +2752,8 @@ mod tests {
             set: vec![3, 4],
             second: 0.,
             moves_until: None,
+            started: None,
+            after_activation: false,
             parts: vec![
                 PartMotion {
                     members: Members::Deepest(3),

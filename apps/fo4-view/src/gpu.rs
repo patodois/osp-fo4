@@ -2053,7 +2053,9 @@ fn hud_update(
         .is_some_and(|at| at.elapsed().as_secs_f64() > HUD_STOOD_SECONDS);
     let texts = p.spoken_texts();
     // A named platform near the walker, in its space, moving under a
-    // sequence the run started (viewer policy, `crate::hud::platform_status`).
+    // sequence the run started, that carries the walker or that the run set
+    // moving after the walker's activation (viewer policy,
+    // `crate::hud::platform_status`).
     let same_space = |k: &fo4_plugin::FormKey| {
         seen.space
             .as_ref()
@@ -2066,6 +2068,7 @@ fn hud_update(
         .map(|pl| crate::hud::PlatformNear {
             boxes: pl.parts.iter().filter_map(|m| m.box_now()).collect(),
             carries: pl.parts.iter().any(|m| m.carries),
+            after_activation: pl.after_activation,
             moves_until: pl.moves_until,
         })
         .collect();

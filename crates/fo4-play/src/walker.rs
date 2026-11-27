@@ -724,6 +724,9 @@ pub struct Walker {
     /// The space the walker left by its last change of space (a load
     /// door, a `MoveTo`, a sit), for `play_elevator_end_door_onward_v1`.
     left: Option<FormKey>,
+    /// The second of the walker's first activation that met a reference
+    /// since its last change of space ([`Walker::platforms`]).
+    activated: Option<f64>,
     t: f64,
     last: Option<Point>,
     still: bool,
@@ -813,6 +816,7 @@ impl Walker {
             character: None,
             space: None,
             left: None,
+            activated: None,
             t: 0.0,
             last: None,
             still: true,
@@ -1414,6 +1418,12 @@ impl Walker {
     /// ([`crate::elevator::Platform`]). Reading them changes nothing.
     /// Each part says whether the walker stands on it now
     /// ([`crate::elevator::PartMotion::carries`]).
+    ///
+    /// Each is marked [`crate::elevator::Platform::after_activation`] when
+    /// the run last started a sequence on it at or after an activation of
+    /// a reference by the walker, no change of space between (the first
+    /// such activation is kept, so pressing E again while it moves does
+    /// not unmark it).
     pub fn platforms(&self) -> Vec<crate::elevator::Platform> {
         let ground = self.character.as_ref().and_then(|c| {
             let g = c.ground.filter(|_| c.grounded)?;
@@ -1421,7 +1431,12 @@ impl Walker {
         });
         self.elevators
             .iter()
-            .map(|e| e.platform_carrying(ground))
+            .map(|e| {
+                let mut p = e.platform_carrying(ground);
+                p.after_activation =
+                    matches!((p.started, self.activated), (Some(s), Some(a)) if s >= a);
+                p
+            })
             .collect()
     }
 
@@ -1620,6 +1635,7 @@ impl Walker {
                     if let Some(d) = self.doors.as_ref().and_then(|d| d.doors.get(&norm(&k))) {
                         self.door = Some((k.clone(), d.clone()));
                     }
+                    self.activated.get_or_insert(self.t);
                     (
                         Ok((k.clone(), h.distance)),
                         Some(Act {
@@ -2054,6 +2070,7 @@ impl Walker {
             facing: None,
         };
         self.left = self.space.replace(to.space.clone());
+        self.activated = None;
         self.last = Some(p.clone());
         self.still = false;
         let mut log = self.log.borrow_mut();
