@@ -213,12 +213,16 @@ impl QuestInfo {
             }
         }
         let mut stages = Vec::new();
-        let mut mapped = 0;
+        // The fragment keys some stage entry maps: a stage number stored
+        // twice maps the same keys twice, so they are counted once.
+        let mut mapped = BTreeSet::new();
         for s in &q.stages {
             let mut entries = Vec::new();
             for (i, e) in s.entries.iter().enumerate() {
                 let fragment = fragments.get(&(s.stage, i as i32)).cloned();
-                mapped += usize::from(fragment.is_some());
+                if fragment.is_some() {
+                    mapped.insert((s.stage, i as i32));
+                }
                 entries.push(EntryInfo {
                     conditions: !e.conditions.is_empty(),
                     list: e.conditions.iter().map(Condition::from).collect(),
@@ -303,7 +307,7 @@ impl QuestInfo {
                 unique_actors,
                 priority: q.general.map(|g| g.priority),
                 fragment_script,
-                unmapped_fragments: fragments.len() - mapped,
+                unmapped_fragments: fragments.len() - mapped.len(),
                 event: q.event,
                 event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
                 created,

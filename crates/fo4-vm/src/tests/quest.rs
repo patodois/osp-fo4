@@ -792,3 +792,37 @@ fn script_run_in_quest_mode_runs_the_fragment_inside_the_handler() {
     assert!(r.quest_jobs.is_empty());
     assert!(!r.rules.contains(rules::QUEST_SET_STAGE));
 }
+
+#[test]
+fn a_stage_number_stored_twice_counts_its_fragment_once() {
+    // One fragment (stage 10, entry 0) and two stages numbered 10: the
+    // second maps the same key, which used to count it twice and underflow
+    // the unmapped count.
+    let q = [
+        sub(b"EDID", b"Q1\0"),
+        sub(
+            b"VMAD",
+            &quest_vmad("QF1", &[], &[(10, 0, "Fragment_Stage_0010_Item_00")]),
+        ),
+        dnam(0),
+        stage(10, 0, &[false]),
+        stage(10, 0, &[false]),
+    ]
+    .concat();
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend(1u32.to_le_bytes());
+    hedr.extend(0x900u32.to_le_bytes());
+    let mut plugin = {
+        let mut r = record(b"TES4", 0, &sub(b"HEDR", &hedr));
+        r[8..12].copy_from_slice(&fo4_plugin::MASTER.to_le_bytes());
+        r
+    };
+    plugin.extend(record(b"QUST", Q1, &q));
+    let sources: Vec<(String, Box<dyn ReadAt>)> =
+        vec![("test.esm".into(), Box::new(Owned(plugin)))];
+    let b = Budget::new(8 << 20);
+    let s = Store::from_sources(fo4_core::Game::Fallout4, sources, Limits::default(), &b).unwrap();
+    let i = quest::QuestInfo::load(&s, &key(Q1), &b).unwrap().unwrap();
+    assert_eq!(i.stages.len(), 2);
+    assert_eq!(i.unmapped_fragments, 0);
+}
