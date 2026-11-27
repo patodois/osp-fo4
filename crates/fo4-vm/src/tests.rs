@@ -782,6 +782,10 @@ fn values_no_rule_settles_stay_open() {
          local Int r
          7 r a b
          26 r
+         func Rem Int global Int a Int b
+         local Int r
+         9 r a b
+         26 r
          func Same Bool global String a String b
          local Bool r
          15 r a b
@@ -792,7 +796,7 @@ fn values_no_rule_settles_stay_open() {
          26 r",
     ));
     let g = |n: &str| lib.scripts["open"].function("", n).unwrap().clone();
-    let (div, same, text) = (g("div"), g("same"), g("text"));
+    let (div, rem, same, text) = (g("div"), g("rem"), g("same"), g("text"));
     let mut host = NoHost;
     let mut vm = Vm::new(&mut lib, &mut host);
     assert_eq!(
@@ -804,8 +808,21 @@ fn values_no_rule_settles_stay_open() {
         Outcome::Completed(Val::Unknown(_))
     ));
     assert!(matches!(
-        vm.run(None, div, vec![Val::Int(1), Val::Int(0)]),
+        vm.run(None, div.clone(), vec![Val::Int(1), Val::Int(0)]),
         Outcome::Failed(VmError::DivisionByZero { .. })
+    ));
+    // The smallest int over -1 overflows: an open value, not a panic.
+    assert!(matches!(
+        vm.run(None, div, vec![Val::Int(i32::MIN), Val::Int(-1)]),
+        Outcome::Completed(Val::Unknown(_))
+    ));
+    assert_eq!(
+        vm.run(None, rem.clone(), vec![Val::Int(7), Val::Int(2)]),
+        Outcome::Completed(Val::Int(1))
+    );
+    assert!(matches!(
+        vm.run(None, rem, vec![Val::Int(i32::MIN), Val::Int(-1)]),
+        Outcome::Completed(Val::Unknown(_))
     ));
     let s = |t: &str| Val::Str(t.into());
     assert_eq!(

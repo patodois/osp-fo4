@@ -843,6 +843,10 @@ impl Vm<'_> {
                             site: Box::new(Self::site(f)),
                         }))
                     }
+                    // The smallest int over -1 overflows the quotient and
+                    // the remainder alike: `checked_rem` is None there, and
+                    // the result is the open overflow value below.
+                    _ if x.checked_rem(y).is_none() => None,
                     7 => {
                         // Truncating and flooring quotients agree when the
                         // quotient is exact or not negative.
