@@ -478,6 +478,24 @@ own refusals (collision build, persistent join: a reference's data limit is that
 vault table is not seen; the containers' fields (drawing and collision together); a memo of parsed collision models
 for the dream's hold; the player's pod drawn open.
 
+Thirty-third-round fixes (the thirty-first sessions): the held cue was on in the live window at every push the
+person reported (the window log names the status line's causes at each change), but the person looked 3.5 to 6 s
+after letting go, past the 2 s it stayed, and one push held the walker under the second it took: it now says
+`blocked` after half a second, stays up to 8 s while the walker stands there, and has a row of its own below the
+objective (a live window with injected keys at the control stairs shows it during and after the hold). The ground
+that ended before the ruined town was the prewar worldspace's data: the next square's cell stores no LAND; the
+follow grid had loaded it. `--play-land-edge` (`play_walk_held_at_land_edge_v1`, in the preset) holds the walker at
+such an edge with `blocked - no ground beyond`. `fo4-view --draw-water` (`cell_water_height_plane_v1`, in the preset)
+draws a flat translucent square at each loaded cell's stored water height (XCLW); the water type's colours, the
+world's default water height and placed water planes are not read, walking is unchanged. Probed, not changed: the
+bridge approach's and the house street's walker columns all stand on terrain (no gap in the walking world); the
+street's road is not a placed reference there and the parked car's bounds stand some tens of units above the
+terrain. Measured, not changed: at the first bridge the walker's walking world took 3.5 s (warm process) and the
+window's drawing load 1.7 s plus 0.4 s of upload while the play clock stood. Next: build the next square's walking
+world ahead on its own thread when the walker nears a square's edge (the clock then need not stand), upload a
+square's draws in slices; the water type's colours (WATR, no public layout read yet); placed water planes; the
+cone that clips the camera when looked down at; the parked cars' height; the containers' fields.
+
 Thirty-second-round fixes (the thirtieth sessions): the platform cue reads a part's visible motion (a held pose's
 keys repeat with noise) and speaks only of the part carrying the walker: moving, starting in N s, ready, else
 nothing (`Platform::carried_moving`, `carried_starts`, `carried_until`; `play_run --play-report-platforms` logs it).

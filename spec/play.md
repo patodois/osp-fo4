@@ -2499,9 +2499,33 @@ blocking: the crate beside it still stops the walker.
 
 *Held below the frame.* `--play-held-cue` (a viewer aid, no rule): the walker keeps its hold
 (`fo4_play::walker::Held`, `next_held`: a blocked tick with a direction key held, the feet within 8 units across
-since) and the window's status line says `blocked` after a second, `blocked - low obstacle` when the top of the
-primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`); the line stays 2 s
-after the key is let go while the feet stay within 8 units (`hud::held_cue`). It names nothing.
+since) and the window's status line says `blocked` after half a second, `blocked - low obstacle` when the top of
+the primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`), `blocked - no
+ground beyond` when the tick was held at the land's edge (below); the line stays up to 8 s after the key is let go
+while the feet stay within 8 units (`hud::held_cue`), on a row of its own below the objective (`hud::STATUS_ROW`).
+It names nothing. Round 33 read the 31st session's window log: the line was on at every push the person reported
+(the log names the status line's causes at each change), but the person looked 3.5 to 6 s after letting go, past
+the 2 s it stayed then, and one push held the walker for less than the second it then took. Keys that arrive from
+a window take the same path as a record (`walker::tests::keys_that_arrive_hand_the_window_the_hold_against_a_wall`).
+
+*The land's edge.* `--play-land-edge` (`play_walk_held_at_land_edge_v1`, pending): in a worldspace whose walking
+world searched its neighbours, a tick that would take the feet from a grid square whose terrain the build loaded
+(`fo4_play::world::Built::land`) into one whose terrain it did not (no cell, no LAND, a refused terrain) is undone:
+the walker stands, the tick counts as blocked while a key is held, and the hold carries `Held::edge`. The 31st
+session's B met such an edge in the prewar worldspace: the next square's cell stores no LAND (and trees of the
+squares beside it stand over nothing). The follow grid itself loads every square about the walker before the
+walker can reach it (the walking world is built again, and the window loads the walker's cell, at each change of
+square, the run waiting), so a square of the follow radius is never left unloaded; only squares the data leaves
+without land can end the ground.
+
+*Water.* `fo4-view --draw-water` (`cell_water_height_plane_v1`, pending; with `--terrain`): each loaded exterior
+square whose cell stores a water height (XCLW, f32; the largest finite f32 stored by cells without water) gets one
+flat blended square at that height (`fo4_scene::water::cell_water`, `fo4_render::terrain::append_water`) in a plain
+colour and opacity of the viewer's (`WATER_RGBA`). Not read: the water type's record (XCWT names it; its colours,
+opacity, textures and shader), the worldspace's default water height for cells without XCLW, placed water (an
+activator whose model's shape carries a water shader property: its drawing refused as before, its collision
+unchanged). The
+walker does not wade or swim: walking is unchanged, no rule is needed for it.
 
 *Where a hold's time goes.* Built headless in a fresh process, the dream's walking world takes 7.4 s: 4.6 s loading
 the cell's scene, 0.5 s reading its collision, 1.7 s for the markers and doors, 0.5 s for the dormant piece; a grid
