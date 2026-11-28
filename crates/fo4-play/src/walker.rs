@@ -414,6 +414,11 @@ pub struct Elevators {
     /// when it next stands on the ride's piece (`--play-elevator-door-landing`,
     /// `play_elevator_end_landing_v1`).
     pub door_landing: bool,
+    /// A load door that puts the walker where a moving part of a named
+    /// reference of the new space is still on its way to puts it on that
+    /// part where the part stands now (`--play-elevator-door-arrival`,
+    /// `play_elevator_door_arrival_on_ride_v1`).
+    pub door_arrival: bool,
     /// The parts move by the rigid motion their chain makes under each
     /// sequence, in place of the translations (`--play-elevator-rigid`,
     /// `play_elevator_rigid_v1`).
@@ -668,6 +673,13 @@ pub fn latest_place(mut found: Vec<(f64, Result<Place, String>)>) -> (Option<(f6
 }
 
 /// The walker driven by a scripted input.
+/// How long after a load door (run seconds) the walker looks for a named
+/// platform's part set on its way to the door's place
+/// (`play_elevator_door_arrival_on_ride_v1`). Viewer policy of the play
+/// mode: the run starts such a sequence in the slices right after the
+/// crossing.
+pub const ARRIVAL_WAIT: f64 = 1.0;
+
 pub struct Walker {
     elevator_options: Option<Elevators>,
     elevators: Vec<crate::elevator::Elevator>,
@@ -697,6 +709,11 @@ pub struct Walker {
     /// collision stands hidden until the walker's feet leave its box.
     sit_passable: bool,
     sat_in: Option<SatIn>,
+    /// `play_elevator_door_arrival_on_ride_v1`: the last load door's place
+    /// and second, while a named platform's part may still be set on its
+    /// way there by the run's graph (the run starts the part's sequence
+    /// once the walker has crossed).
+    arrival: Option<([f64; 3], f64)>,
     /// `--play-player-sit-marker` (`play_player_sit_marker_v1`): a followed
     /// sit puts the walker at the furniture's marker.
     sit_marker: bool,
@@ -801,6 +818,7 @@ impl Walker {
             player_sits: None,
             sit_passable: false,
             sat_in: None,
+            arrival: None,
             sit_marker: false,
             moved: None,
             boxes: None,
@@ -1349,6 +1367,68 @@ impl Walker {
                 )),
             }
         }
+    }
+
+    /// `play_elevator_door_arrival_on_ride_v1`: within [`ARRIVAL_WAIT`]
+    /// seconds of a load door, when a rigid part of a named reference of
+    /// the walker's space is on its way to the door's place
+    /// ([`crate::elevator::Elevator::arrival`]), the walker is put on that
+    /// part where it stands now and settled there; looked for once a
+    /// slice, then given up.
+    fn arrive(&mut self) {
+        let Some((place, at)) = self.arrival else {
+            return;
+        };
+        if self.t - at > ARRIVAL_WAIT {
+            self.arrival = None;
+            return;
+        }
+        let Some(here) = self.space.as_ref().map(norm) else {
+            return;
+        };
+        let reach = self.opts.params.step_height;
+        let found = self
+            .elevators
+            .iter()
+            .filter(|e| e.space == here)
+            .find_map(|e| {
+                e.arrival(place, self.t, reach)
+                    .map(|(p, x)| (e.reference.clone(), p, x))
+            });
+        let Some((reference, part, put)) = found else {
+            return;
+        };
+        self.arrival = None;
+        let Ok(mut c) = Character::new(self.opts.params, self.opts.settings, put) else {
+            return;
+        };
+        // The parts stand where their tracks put them now before the walker
+        // settles on one.
+        for e in &mut self.elevators {
+            if e.space == here && e.advance(self.live.space_mut(), &mut c, self.t).is_err() {
+                return;
+            }
+        }
+        c.settle(self.live.space(), self.opts.settle_ticks);
+        c.ticks = 0;
+        let feet = c.feet;
+        self.character = Some(c);
+        let mut log = self.log.borrow_mut();
+        log.rules.insert(crate::rules::ELEVATOR_DOOR_ARRIVAL);
+        log.elevators.push((
+            self.t,
+            format!(
+                "{}: the load door's place [{:.1}, {:.1}, {:.1}] is where part {part} arrives; the walker is put on it where it stands now, feet settled at [{:.1}, {:.1}, {:.1}] ({})",
+                fo4_vm::bind::record_key(&reference),
+                place[0],
+                place[1],
+                place[2],
+                feet[0],
+                feet[1],
+                feet[2],
+                crate::rules::ELEVATOR_DOOR_ARRIVAL
+            ),
+        ));
     }
 
     /// Whether the person's activation toggles doors
@@ -2063,6 +2143,14 @@ impl Walker {
             .map_err(|e| e.to_string())?;
         c.settle(self.live.space(), self.opts.settle_ticks);
         c.ticks = 0;
+        // `play_elevator_door_arrival_on_ride_v1`: the run's graph sets a
+        // part on its way to the door's place once it sees the walker
+        // through the door; the walker's next slices look for it.
+        self.arrival = self
+            .elevator_options
+            .as_ref()
+            .is_some_and(|o| o.door_arrival)
+            .then_some((to.pos, self.t));
         let p = Point {
             t: self.t,
             space: to.space.clone(),
@@ -2256,6 +2344,7 @@ impl Driver for Walker {
             .and_then(|()| self.follow(run.vm));
         if followed.is_ok() {
             self.follow_elevators(run);
+            self.arrive();
             self.follow_player_places(run);
             if self.opts.pick_actors {
                 self.follow_actor_places(run);

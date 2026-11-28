@@ -2033,6 +2033,7 @@ mod tests {
                 },
             ],
             moves_until: None,
+            carried_until: None,
             started: None,
             after_activation: false,
         };
@@ -2427,6 +2428,7 @@ mod tests {
                 },
             ],
             moves_until: None,
+            carried_until: None,
             started: None,
             after_activation: false,
         };
@@ -2516,6 +2518,7 @@ mod tests {
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
                 moves_until: None,
+                carried_until: None,
                 started: None,
                 after_activation: false,
             }]
@@ -2571,6 +2574,7 @@ mod tests {
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
                 moves_until: None,
+                carried_until: None,
                 started: None,
                 after_activation: false,
             }]
@@ -2752,6 +2756,7 @@ mod tests {
             set: vec![3, 4],
             second: 0.,
             moves_until: None,
+            carried_until: None,
             started: None,
             after_activation: false,
             parts: vec![

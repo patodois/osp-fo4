@@ -105,6 +105,12 @@ pub mod rules {
     /// the walker when it next stands on the ride's piece; standing on
     /// anything else first drops it (`--play-elevator-door-landing`).
     pub const ELEVATOR_END_LANDING: &str = "play_elevator_end_landing_v1";
+    /// A load door whose place (its XTEL position) lies where a rigid part
+    /// of a named reference of the new space stands at its started track's
+    /// last key, while that part is still on its way there, puts the walker
+    /// on the part where it stands now: the place carried back with the
+    /// part (`--play-elevator-door-arrival`).
+    pub const ELEVATOR_DOOR_ARRIVAL: &str = "play_elevator_door_arrival_on_ride_v1";
     /// The box of a collision marker (`walk_collision_marker_box_v1`)
     /// placed enabled with no enable parent, among a walking world's loaded
     /// references or the worldspace's persistent references within one
@@ -232,7 +238,7 @@ pub mod rules {
     /// (`--play-collision-persistent`).
     pub const WORLD_PERSISTENT_COLLISION: &str = "play_world_persistent_refs_walk_in_square_v1";
     /// Every rule above.
-    pub const ALL: [&str; 34] = [
+    pub const ALL: [&str; 35] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -247,6 +253,7 @@ pub mod rules {
         ELEVATOR_RIGID,
         ELEVATOR_END_DOOR_ONWARD,
         ELEVATOR_END_LANDING,
+        ELEVATOR_DOOR_ARRIVAL,
         MARKER_BOXES,
         MARKER_BOX_LAYER_PASSED,
         MARKER_BOX_LAYER_RECORDS,

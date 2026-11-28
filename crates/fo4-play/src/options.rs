@@ -55,12 +55,14 @@ pub struct Play {
     /// `--play-elevator-rigid` (`play_elevator_rigid_v1`),
     /// `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`),
     /// `--play-elevator-door-landing` (`play_elevator_end_landing_v1`),
+    /// `--play-elevator-door-arrival` (`play_elevator_door_arrival_on_ride_v1`),
     /// `--play-elevator-through-terrain` (`walk_ride_rider_passes_terrain_v1`).
     pub elevator_door: bool,
     pub held_pose: bool,
     pub rigid: bool,
     pub door_onward: bool,
     pub door_landing: bool,
+    pub door_arrival: bool,
     pub through_terrain: bool,
     /// `--play-player-moveto` (`play_player_moveto_v1`),
     /// `--play-player-sits` (`play_player_sit_furniture_v1`).
@@ -194,6 +196,7 @@ impl Play {
             "--play-elevator-rigid" => &mut self.rigid,
             "--play-elevator-door-onward" => &mut self.door_onward,
             "--play-elevator-door-landing" => &mut self.door_landing,
+            "--play-elevator-door-arrival" => &mut self.door_arrival,
             "--play-elevator-through-terrain" => &mut self.through_terrain,
             "--play-player-moveto" => &mut self.player_moveto,
             "--play-player-sits" => &mut self.player_sits,
@@ -399,6 +402,12 @@ impl Play {
         if self.door_stored_open && !self.door_toggle {
             return Err("--play-door-stored-open needs --play-door-toggle".into());
         }
+        if self.door_arrival && !(self.rigid && self.load_doors) {
+            return Err(
+                "--play-elevator-door-arrival needs --play-elevator-rigid and --play-load-doors"
+                    .into(),
+            );
+        }
         if self.door_landing && !self.elevator_door {
             return Err("--play-elevator-door-landing needs --play-elevator-door".into());
         }
@@ -541,6 +550,7 @@ impl Play {
             rigid: self.rigid,
             door_onward: self.door_onward,
             door_landing: self.door_landing,
+            door_arrival: self.door_arrival,
             through_terrain: self.through_terrain,
         }
     }
@@ -774,6 +784,9 @@ impl Play {
             if elevators.door_landing {
                 let _ = writeln!(report, "switch: a ride that ended with the walker in the air ends for it when it next stands on the ride (--play-elevator-door-landing)");
             }
+            if elevators.door_arrival {
+                let _ = writeln!(report, "switch: a load door that puts the walker where a named reference's moving part is still on its way to puts it on the part where the part stands now (--play-elevator-door-arrival, {})", crate::rules::ELEVATOR_DOOR_ARRIVAL);
+            }
             if elevators.through_terrain {
                 let _ = writeln!(report, "switch: while the walker stands on a moving part, the terrain does not touch it (--play-elevator-through-terrain, {})", fo4_walk::platform::rules::RIDE_PASSES_TERRAIN);
             }
@@ -887,7 +900,7 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-collision-furniture-fields --play-collision-furniture-at-rest --play-collision-persistent --play-step-lookahead --play-player-moveto --play-player-sits --play-sit-passable --play-player-sit-marker --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-door-arrival --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-collision-furniture-fields --play-collision-furniture-at-rest --play-collision-persistent --play-step-lookahead --play-player-moveto --play-player-sits --play-sit-passable --play-player-sit-marker --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
@@ -909,6 +922,9 @@ mod tests {
         assert!(read("--play-collision-persistent --play-around 0").is_err());
         assert!(!Play::default().world_options().persistent);
         assert!(s.step_lookahead && s.walker_options().settings.step_lookahead_unless_climbed);
+        assert!(s.door_arrival && s.elevators().door_arrival);
+        assert!(!Play::default().elevators().door_arrival);
+        assert!(read("--play-load-doors --play-elevator-door-arrival").is_err());
         assert!(
             !Play::default()
                 .walker_options()

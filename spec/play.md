@@ -2446,6 +2446,28 @@ platform that carries the walker or whose sequence the run started at or after a
 same space (`Platform::after_activation`): the exit deck after the console, not the lower grille after the descent
 nor the surface lift after the ride.
 
+**Round 31.** *Stops on clear ground.* The 29th session's B stops by the barricades, on the line to the surface lift
+and beside the first bridge's rock are not the step-up's look-ahead (`walk_step_lookahead_unless_climbed_v1`): the
+same record replayed with the switch off stops at the same three places within a unit. Each is a drawn shape below
+the eye's frame: the walker wedged between a 45-unit movable static (its hulls taller than the step) and a barrier's
+rail 24 units above the feet; between the same kind of movable static and a crate on the lift's apron; slid along a
+rock's mesh into terrain sloping 52 degrees, past the slope limit. Nothing changed for them.
+
+*The surface lift.* The vault's ride up ends at the load door to the surface at the second the run's graph starts
+the surface lift's rise; the door's place is the top the lift's deck reaches at that sequence's last key, while at
+the crossing the deck stands far down its shaft under the closed hatch. Put at the door's place, the walker stood on
+the hatch, was carried sideways as its halves slid apart and fell onto the rising deck. `play_run
+--play-elevator-door-arrival` (`play_elevator_door_arrival_on_ride_v1`, in the preset; with
+`--play-elevator-rigid` and `--play-load-doors`; `Elevator::arrival`): a load door whose place lies where a rigid
+part of a named reference of the new space stands at its track's last key, while that part's motion still changes,
+puts the walker on the part where it stands at the crossing (the place carried back with the part); the part
+carries it up to the door's place.
+
+*The cue on a settled deck.* `Platform::moves_until` is now the last key at which a part's motion changes (a held
+tail of keys stands), and `Platform::carried_until` the same for the part carrying the walker; the status line
+counts down to the carrying part's own end while one carries the walker, so a settled deck says nothing while the
+rest of its sequence (the lower grille's column) still moves.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -2526,6 +2548,7 @@ nor the surface lift after the ride.
 | `dialogue_hello_owed_v1` | `quest_run --hello-owed` (in the run's arguments) | the hello line's own condition on the checkpoint talk's stage; that an actor greets a player already near it once its line holds is prior knowledge | weak |
 | `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
 | `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
+| `play_elevator_door_arrival_on_ride_v1` | `--play-elevator-door-arrival` (in the preset since round 31) | the surface lift's rise starts at the crossing and its deck's last key reaches the door's place; that a rider arrives with its lift is prior knowledge | weak |
 | `walk_ride_rider_passes_terrain_v1` | `--play-elevator-through-terrain` (in the preset since round 26) | `ride_check --trace` on the vault elevator and the 25th session's second record: the terrain over the shaft pushes the riding walker sideways off the deck; no read data holes the terrain there | weak |
 | `play_ride_terrain_cut_v1` | `fo4-view --draw-ride-cuts-terrain` (in the preset since round 27) | every LAND field of the shaft's cell read and the cell's quad bits clear: no data holes the terrain cone inside the shaft; the cut's box and condition are this reading's | weak |
 | `play_collision_marker_boxes_v1` | `--play-marker-boxes` (in the preset since the gate-box step) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |

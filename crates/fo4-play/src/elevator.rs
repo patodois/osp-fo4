@@ -286,6 +286,56 @@ pub fn motion_at(track: &[(f64, Motion)], t: f64) -> Motion {
     last.1
 }
 
+/// Below this a key's motion is the one before it (world units, and the
+/// quaternion's words): a sequence that holds its pose repeats its keys.
+const SAME_MOTION: f64 = 1e-6;
+
+/// The second of the last key of a rigid `track` whose motion differs from
+/// the key before it: the part moves until then and stands after it.
+/// `None` when every key holds the first key's motion.
+pub fn last_change(track: &[(f64, Motion)]) -> Option<f64> {
+    // Two motions are one when they turn alike and move the origin alike
+    // (the pivot is a way of writing the same motion).
+    let differ = |a: &Motion, b: &Motion| {
+        let (oa, ob) = (a.apply([0.0; 3]), b.apply([0.0; 3]));
+        (0..4).any(|i| (a.rotation[i] - b.rotation[i]).abs() > SAME_MOTION)
+            || (0..3).any(|i| (oa[i] - ob[i]).abs() > SAME_MOTION)
+    };
+    track
+        .windows(2)
+        .rev()
+        .find(|w| differ(&w[0].1, &w[1].1))
+        .map(|w| w[1].0)
+}
+
+/// As [`last_change`] for a translation track.
+pub fn last_translation_change(track: &[(f64, [f64; 3])]) -> Option<f64> {
+    track
+        .windows(2)
+        .rev()
+        .find(|w| (0..3).any(|i| (w[0].1[i] - w[1].1[i]).abs() > SAME_MOTION))
+        .map(|w| w[1].0)
+}
+
+/// The world box of `stored` (a box in world axes) moved by `m`: its eight
+/// corners moved and boxed again.
+fn moved_box(stored: ([f64; 3], [f64; 3]), m: &Motion) -> ([f64; 3], [f64; 3]) {
+    let (lo, hi) = stored;
+    let mut out: Option<([f64; 3], [f64; 3])> = None;
+    for k in 0..8 {
+        let c: [f64; 3] = std::array::from_fn(|i| if k & (1 << i) != 0 { hi[i] } else { lo[i] });
+        let p = m.apply(c);
+        out = Some(match out {
+            None => (p, p),
+            Some((a, b)) => (
+                std::array::from_fn(|i| a[i].min(p[i])),
+                std::array::from_fn(|i| b[i].max(p[i])),
+            ),
+        });
+    }
+    out.unwrap_or(stored)
+}
+
 /// The parts of the rigid reading (`play_elevator_rigid_v1`) of the model
 /// `d`: each source of `ew` built from a collision instance of `ec` goes
 /// with the deepest node of its body's chain that any of the model's
@@ -1111,21 +1161,7 @@ impl PartMotion {
     /// stored box's eight corners moved by [`PartMotion::motion`], boxed
     /// again in world axes. `None` when the part holds no collision.
     pub fn box_now(&self) -> Option<([f64; 3], [f64; 3])> {
-        let (lo, hi) = self.stored?;
-        let mut out: Option<([f64; 3], [f64; 3])> = None;
-        for k in 0..8 {
-            let c: [f64; 3] =
-                std::array::from_fn(|i| if k & (1 << i) != 0 { hi[i] } else { lo[i] });
-            let p = self.motion.apply(c);
-            out = Some(match out {
-                None => (p, p),
-                Some((a, b)) => (
-                    std::array::from_fn(|i| a[i].min(p[i])),
-                    std::array::from_fn(|i| b[i].max(p[i])),
-                ),
-            });
-        }
-        out
+        Some(moved_box(self.stored?, &self.motion))
     }
 }
 
@@ -1150,6 +1186,12 @@ pub struct Platform {
     /// still to come (after [`Platform::second`]): the parts move until
     /// then and stand from then on. `None`: nothing moves after `second`.
     pub moves_until: Option<f64>,
+    /// When a part carries the walker ([`PartMotion::carries`]): the last
+    /// second that part's own motion changes, when it is still to come
+    /// (after [`Platform::second`]). `None` when no part carries the walker
+    /// or the carrying part stands from now on, whatever the other parts
+    /// still do.
+    pub carried_until: Option<f64>,
     /// The second the run last started a sequence on it, if it did.
     pub started: Option<f64>,
     /// Whether the run started that sequence at or after an activation of
@@ -1233,19 +1275,29 @@ impl Elevator {
         }
         // The last key of every part's and group's track: still to come,
         // the platform moves until then.
-        let ends = self
-            .parts
+        // The last key at which each part's or group's motion changes:
+        // still to come, the platform moves until then (a sequence's tail
+        // that holds one pose is standing, not moving).
+        let part_ends: Vec<Option<f64>> =
+            self.parts.iter().map(|p| last_change(&p.track)).collect();
+        let group_ends: Vec<Option<f64>> = self
+            .groups
             .iter()
-            .filter(|p| p.track.len() > 1)
-            .filter_map(|p| p.track.last().map(|k| k.0))
-            .chain(
-                self.groups
-                    .iter()
-                    .map(|g| self.group_track(g))
-                    .filter(|tr| tr.len() > 1)
-                    .filter_map(|tr| tr.last().map(|k| k.0)),
-            );
-        let moves_until = ends.fold(None, |m: Option<f64>, e| Some(m.map_or(e, |m| m.max(e))));
+            .map(|g| last_translation_change(&self.group_track(g)))
+            .collect();
+        let latest = |e: &mut dyn Iterator<Item = f64>| {
+            e.fold(None, |m: Option<f64>, e| {
+                Some(m.map_or(e, |m: f64| m.max(e)))
+            })
+        };
+        let moves_until = latest(&mut part_ends.iter().chain(&group_ends).flatten().copied());
+        let carried_until = latest(
+            &mut parts
+                .iter()
+                .zip(part_ends.iter().chain(&group_ends))
+                .filter(|(m, _)| m.carries)
+                .filter_map(|(_, e)| *e),
+        );
         Platform {
             reference: self.reference.clone(),
             space: self.space.clone(),
@@ -1254,6 +1306,7 @@ impl Elevator {
             second: t,
             parts,
             moves_until: moves_until.filter(|e| *e > t),
+            carried_until: carried_until.filter(|e| *e > t),
             started: self.started_at,
             after_activation: false,
         }
@@ -1261,6 +1314,40 @@ impl Elevator {
 }
 
 impl Elevator {
+    /// `play_elevator_door_arrival_on_ride_v1`: where a walker a load door
+    /// puts at `pos` at `second` arrives when a rigid part of this
+    /// reference is still on its way to that place: a part whose track's
+    /// motion still changes after `second` and whose collision box at the
+    /// track's last key holds `pos` across (x and y) with `pos` no lower
+    /// than its bottom and at most `reach` above its top. The point is
+    /// carried back with the part to where the part stands at `second` (the
+    /// last key's motion undone, the motion at `second` applied): (the
+    /// part's index, that point). Of two such parts, the one whose top at
+    /// the last key is highest. `None` with no such part (the walker stands
+    /// where the door puts it).
+    pub fn arrival(&self, pos: [f64; 3], second: f64, reach: f64) -> Option<(usize, [f64; 3])> {
+        let mut best: Option<(f64, usize, [f64; 3])> = None;
+        for (i, p) in self.parts.iter().enumerate() {
+            if last_change(&p.track).is_none_or(|e| e <= second) {
+                continue;
+            }
+            let (Some(stored), Some(last)) = (p.base.bounds, p.track.last()) else {
+                continue;
+            };
+            let (lo, hi) = moved_box((stored.min, stored.max), &last.1);
+            let across = (0..2).all(|k| pos[k] >= lo[k] && pos[k] <= hi[k]);
+            if !across || pos[2] < lo[2] || pos[2] > hi[2] + reach {
+                continue;
+            }
+            let now = motion_at(&p.track, second);
+            let at = now.apply(last.1.unapply(pos));
+            if best.is_none_or(|(top, _, _)| hi[2] > top) {
+                best = Some((hi[2], i, at));
+            }
+        }
+        best.map(|(_, i, at)| (i, at))
+    }
+
     /// The box of the reference's collision as stored, the moving parts
     /// at their stored transforms and the still references with it.
     pub fn bounds(&self) -> Option<([f64; 3], [f64; 3])> {
@@ -1972,6 +2059,135 @@ mod tests {
         assert!(b.0[2] <= -500.0 + 1e-6 && b.1[0] >= 540.0 - 1e-6, "{b:?}");
         e.leave();
         assert!(!e.moving(0.0, 10.0));
+    }
+
+    /// `play_elevator_door_arrival_on_ride_v1`: a door's place where a
+    /// part arrives at its track's end, while the part is on its way, is
+    /// carried back to where the part stands now; before the run starts the
+    /// part's sequence and after it ends, the place stands.
+    #[test]
+    fn a_door_place_a_part_is_on_its_way_to_is_carried_back_with_it() {
+        let mut lib = fo4_vm::MapLibrary::default();
+        let mut host = fo4_vm::NoHost;
+        let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+        let o = vm.world.object(
+            "the platform",
+            Some(fo4_vm::bind::record_key(&key(5))),
+            &["objectreference"],
+        );
+        let mut e = rigid_elevator();
+        let place = [10.0, -20.0, 100.5];
+        // Nothing started: no part is on its way.
+        assert_eq!(e.arrival(place, 2.0, 20.0), None);
+        // The run raises part 0 from 2 s to 3 s: its floor reaches z 100.
+        vm.world.anims.started.push((2.0, o, "Up".into()));
+        assert!(e.follow(&vm));
+        let (part, at) = e.arrival(place, 2.0, 20.0).unwrap();
+        assert_eq!(part, 0);
+        assert!(
+            (at[0] - 10.0).abs() < 1e-9
+                && (at[1] + 20.0).abs() < 1e-9
+                && (at[2] - 0.5).abs() < 1e-9,
+            "{at:?}"
+        );
+        let (_, half) = e.arrival(place, 2.5, 20.0).unwrap();
+        assert!((half[2] - 50.5).abs() < 1e-6, "{half:?}");
+        // Too high above the arriving top, outside it across, or once the
+        // part stands: the place stands.
+        assert_eq!(e.arrival([10.0, -20.0, 121.0], 2.0, 20.0), None);
+        assert_eq!(e.arrival([150.0, -20.0, 100.5], 2.0, 20.0), None);
+        assert_eq!(e.arrival(place, 3.0, 20.0), None);
+        // Put there, a walker rides the part up to the door's place.
+        let mut set: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut set, 2.0).unwrap();
+        let mut c = Character::new(Params::PROVISIONAL, Settings::DEFAULT, at).unwrap();
+        c.settle(&set, 600);
+        assert!(c.grounded && c.feet[2].abs() < 1e-3, "{:?}", c.feet);
+        let tick = Settings::DEFAULT.tick;
+        let mut t = 2.0;
+        while t < 3.5 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        assert!((c.feet[2] - 100.0).abs() < 1e-3, "{:?}", c.feet);
+    }
+
+    /// The platform's countdown reads the last key that moves: a held tail
+    /// of keys stands. A part that carries the walker and stands no longer
+    /// counts, whatever another part still does.
+    #[test]
+    fn a_carried_walker_counts_only_its_own_part_while_it_moves() {
+        let m = |z: f64| Motion::translation([0.0, 0.0, z]);
+        let held = vec![(0.0, m(0.0)), (1.0, m(5.0)), (2.0, m(5.0)), (3.0, m(5.0))];
+        assert_eq!(last_change(&held), Some(1.0));
+        assert_eq!(last_change(&[(0.0, m(1.0)), (4.0, m(1.0))]), None);
+        assert_eq!(
+            last_translation_change(&[
+                (0.0, [0.0; 3]),
+                (2.0, [0.0, 1.0, 0.0]),
+                (3.0, [0.0, 1.0, 0.0])
+            ]),
+            Some(2.0)
+        );
+        let mut lib = fo4_vm::MapLibrary::default();
+        let mut host = fo4_vm::NoHost;
+        let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+        let o = vm.world.object(
+            "the platform",
+            Some(fo4_vm::bind::record_key(&key(5))),
+            &["objectreference"],
+        );
+        // One sequence, `Both`: part 0 (the floor) rises 100 units in its
+        // first second and holds there to 1.5 s; part 1 turns over 1.5 s.
+        let mut e = rigid_elevator();
+        let both0: MotionTrack = (0..=90)
+            .map(|k| {
+                let f = k as f64 / 60.0;
+                (f, m(100.0 * f.min(1.0)))
+            })
+            .collect();
+        let both1 = e.parts[1].tracks["Turn"]
+            .iter()
+            .map(|(t, x)| (t * 1.5, *x))
+            .collect();
+        e.parts[0].tracks.insert("Both".into(), both0);
+        e.parts[1].tracks.insert("Both".into(), both1);
+        let mut set: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut set, 0.0).unwrap();
+        let mut c =
+            Character::new(Params::PROVISIONAL, Settings::DEFAULT, [0.0, 0.0, 5.0]).unwrap();
+        c.settle(&set, 600);
+        vm.world.anims.started.push((2.0, o, "Both".into()));
+        assert!(e.follow(&vm));
+        let tick = Settings::DEFAULT.tick;
+        let mut t = 2.0;
+        let ground = |set: &WorldSet<Key>, c: &Character| {
+            c.ground
+                .filter(|_| c.grounded)
+                .and_then(|g| set.source(g.source))
+                .map(|(k, _)| *k)
+        };
+        while t < 2.5 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        let p = e.platform_carrying(ground(&set, &c));
+        assert!(p.parts[0].carries);
+        assert_eq!(p.carried_until, Some(3.0));
+        assert_eq!(p.moves_until, Some(3.5));
+        while t < 3.2 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        let p = e.platform_carrying(ground(&set, &c));
+        assert!(p.parts[0].carries);
+        assert_eq!(p.carried_until, None);
+        assert_eq!(p.moves_until, Some(3.5));
+        // Not carried: no part's own end counts.
+        assert_eq!(e.platform().carried_until, None);
     }
 
     #[test]

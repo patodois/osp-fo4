@@ -38,6 +38,10 @@
 # A ride that ends with the walker in the air ends for it when it lands on
 # the ride (play_elevator_end_landing_v1).
 --play-elevator-door-landing
+# A load door whose place a moving part of a named platform is still on its
+# way to puts the walker on that part where it stands now: the surface lift
+# carries the walker up from its shaft (play_elevator_door_arrival_on_ride_v1).
+--play-elevator-door-arrival
 # While the walker stands on a moving part the terrain does not touch it
 # (walk_ride_rider_passes_terrain_v1): the deck carries it down through the
 # terrain over the shaft instead of the terrain pushing it into the wall.
