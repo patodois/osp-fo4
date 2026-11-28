@@ -345,6 +345,42 @@ pub fn held_status(held: Option<(f64, Option<f64>)>, t: f64) -> Option<String> {
     })
 }
 
+/// How long (seconds) the held cue stays after the hold ends while the
+/// feet stay where it was shown: a person taps the key against what holds
+/// the walker and lets go. Viewer policy.
+pub const HELD_LINGER: f64 = 2.0;
+/// How far (units, across) the feet may get from where the held cue was
+/// shown for it to linger (as `fo4_play::walker::HELD_PROGRESS`).
+pub const HELD_LINGER_ACROSS: f64 = 8.0;
+
+/// What the held cue keeps between frames: its text, the feet where it was
+/// last given and that second ([`held_cue`]).
+pub type HeldKept = (String, [f64; 3], f64);
+
+/// The held cue shown at second `t` with the feet at `feet`: the cue
+/// [`held_status`] gives, kept (text, feet, second last given) for
+/// [`HELD_LINGER`] after it stops giving one while the feet stay within
+/// [`HELD_LINGER_ACROSS`] of where it was. Returns the cue and what to keep.
+pub fn held_cue(
+    held: Option<(f64, Option<f64>)>,
+    feet: [f64; 3],
+    t: f64,
+    kept: Option<HeldKept>,
+) -> (Option<String>, Option<HeldKept>) {
+    if let Some(s) = held_status(held, t) {
+        return (Some(s.clone()), Some((s, feet, t)));
+    }
+    match kept {
+        Some((s, at, since))
+            if t - since < HELD_LINGER
+                && (at[0] - feet[0]).hypot(at[1] - feet[1]) <= HELD_LINGER_ACROSS =>
+        {
+            (Some(s.clone()), Some((s, at, since)))
+        }
+        _ => (None, None),
+    }
+}
+
 impl Shown {
     /// The text of a one-line slot (`None`: the slot is hidden; a subtitle
     /// as its lines joined). `columns`: the characters a line may hold.
@@ -526,6 +562,21 @@ mod tests {
             held_status(Some(held(Some(HELD_LOW))), 12.0).as_deref(),
             Some("blocked - low obstacle")
         );
+    }
+
+    /// Replayed, the 30th session's A tapped the key a second against the
+    /// panel at the control stairs and let go as the cue came: it stays two
+    /// seconds while the feet stay, and goes when the walker moves away.
+    #[test]
+    fn the_held_cue_lingers_after_the_key_is_let_go_while_the_feet_stay() {
+        let feet = [0.0, 0.0, 0.0];
+        let (cue, kept) = held_cue(Some((10.0, Some(30.0))), feet, 11.0, None);
+        assert_eq!(cue.as_deref(), Some("blocked - low obstacle"));
+        let (cue, kept2) = held_cue(None, [3.0, 0.0, 0.0], 12.5, kept.clone());
+        assert_eq!(cue.as_deref(), Some("blocked - low obstacle"));
+        assert_eq!(held_cue(None, feet, 13.1, kept2), (None, None));
+        assert_eq!(held_cue(None, [20.0, 0.0, 0.0], 11.5, kept), (None, None));
+        assert_eq!(held_cue(None, feet, 11.5, None), (None, None));
     }
 
     #[test]

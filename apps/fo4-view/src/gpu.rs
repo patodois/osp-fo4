@@ -2048,6 +2048,7 @@ fn hud_update(
     mut confirmed: Local<(u64, Option<std::time::Instant>)>,
     mut status: Local<String>,
     mut platform_end: Local<Option<f64>>,
+    mut held_kept: Local<Option<crate::hud::HeldKept>>,
     pending: Option<Res<PendingScene>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut quads: Query<(&mut HudQuad, &mut Transform, &mut Visibility)>,
@@ -2104,8 +2105,19 @@ fn hud_update(
     };
     *platform_end = kept;
     // The held cue when no platform speaks (`--play-held-cue`, viewer aid).
-    let platform =
-        platform.or_else(|| crate::hud::held_status(seen.held.map(|h| (h.since, h.top)), seen.t));
+    let platform = match seen.feet {
+        Some(feet) => {
+            let (cue, keep) = crate::hud::held_cue(
+                seen.held.map(|h| (h.since, h.top)),
+                feet,
+                seen.t,
+                held_kept.take(),
+            );
+            *held_kept = keep;
+            platform.or(cue)
+        }
+        None => platform,
+    };
     let shown = crate::hud::Shown {
         prompt: seen.prompt.clone().filter(|_| seen.aim_usable),
         confirm,
