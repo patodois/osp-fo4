@@ -2500,7 +2500,8 @@ blocking: the crate beside it still stops the walker.
 *Held below the frame.* `--play-held-cue` (a viewer aid, no rule): the walker keeps its hold
 (`fo4_play::walker::Held`, `next_held`: a blocked tick with a direction key held, the feet within 8 units across
 since) and the window's status line says `blocked` after a second, `blocked - low obstacle` when the top of the
-primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`). It names nothing.
+primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`); the line stays 2 s
+after the key is let go while the feet stay within 8 units (`hud::held_cue`). It names nothing.
 
 *Where a hold's time goes.* Built headless in a fresh process, the dream's walking world takes 7.4 s: 4.6 s loading
 the cell's scene, 0.5 s reading its collision, 1.7 s for the markers and doors, 0.5 s for the dormant piece; a grid

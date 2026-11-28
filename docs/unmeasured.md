@@ -124,7 +124,7 @@ The preset's other switches belong to no rule of their own: they choose what the
 mode runs (viewer or play-mode policy, the caller's values): `--walk`, `--terrain`, `--around`, `--no-stream`,
 `--play-keys`, `--play-stand`, `--play-reach`, `--play-follow-grid`, `--play-slice`, `--play-held-cue` (the status
 line's "blocked" after a second held against a shape, "low obstacle" when its top is at most 48 units above the
-feet: a viewer aid), and `--timeline-cast` (the
+feet, kept 2 s after the key is let go: a viewer aid), and `--timeline-cast` (the
 run's actors drawn as their characters; how they stand and move is the rules of the `--timeline-*` and
 `--actor-*` rows and of the hypotheses level).
 
