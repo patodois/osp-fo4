@@ -2070,6 +2070,7 @@ fn hud_update(
             carries: pl.parts.iter().any(|m| m.carries),
             after_activation: pl.after_activation,
             moves_until: pl.moves_until,
+            carried_until: pl.carried_until,
         })
         .collect();
     let (platform, kept) = match seen.feet {
