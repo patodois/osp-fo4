@@ -487,8 +487,9 @@ other blended surface, on the GPU and in the CPU frame (no rule; every loaded sq
 machine reach 85 to 100 units and read `blocked`, the bank's lip 31. The rails "missing after a load" were drawn
 beside the eye, out of the frame; the missing road over pale ground is the prewar worldspace's data. `--play-build-ahead`
 (in the preset, no rule) builds the walking world of the square the walker nears on a thread of its own and hands
-it over at the crossing: the same world, the same run, the walking world's part of the stand at the first bridge
-from 3.3 s to under a tenth of a second headless (`fo4_play::ahead`). Next: load the drawing of the square ahead on
+it over at the crossing: the same world, the same run; replayed in the window the play clock stood at the first
+bridge's crossing 4.0 s (B) and 5.5 s (A) before, 1.2 s after, the rest the window's drawing load and upload
+(`fo4_play::ahead`). Headless replays run faster than the clock, so there the thread is often still building. Next: load the drawing of the square ahead on
 the window's data thread too (the window's 1.7 s load and 0.4 s upload still stand at a crossing), the dream's
 hold (a sit, not a grid crossing), the way out of the channel and the lower town's footings (not probed), the
 parked car's height, the cone at the camera, the containers, the pod drawn open.

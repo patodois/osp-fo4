@@ -2590,7 +2590,10 @@ for it when it is still being built); a world kept from a square crossed back in
 never asked, or replaced by a newer request before its build began, is built in place. Which way a world came
 depends on the thread's pace, but the world does not, so the run is the same: B and A of the 32nd sessions
 replayed with it give the sessions' outputs byte for byte (play.txt only adds its switch line and the count of
-squares asked). The window's own drawing load of the new square still runs at the crossing.
+squares asked). The window's own drawing load of the new square still runs at the crossing. Replayed in the window
+from shortly before it (the eye still at the crossing's feet, from the frame log), the first bridge's crossing stood
+4.0 s in B and 5.5 s in A without it, 1.2 s with it (the drawing load and upload). A headless replay runs the clock
+faster than the wall, so there the thread is often still building at the crossing and the gain is small.
 
 ## What the play mode does not do yet
 
