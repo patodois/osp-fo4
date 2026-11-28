@@ -2892,6 +2892,9 @@ mod tests {
         assert!(n2 * 3 < n1, "{n1} {n2}");
     }
 
+    /// The holds a [`Window`] was handed, with its clock at each.
+    type Handed = Rc<RefCell<Vec<(f64, Option<Held>)>>>;
+
     /// A person at a window, without the window: frames of uneven length
     /// (some as long as a busy run lets the window's clock run ahead),
     /// commands stamped at the second the frame ends as the window stamps
@@ -2906,7 +2909,7 @@ mod tests {
         /// Platforms handed over before a wait.
         platforms: Rc<RefCell<u64>>,
         /// The holds handed over before a wait, with the window's clock.
-        held: Rc<RefCell<Vec<(f64, Option<Held>)>>>,
+        held: Handed,
     }
 
     impl Arrivals for Window {
