@@ -278,6 +278,11 @@
 # shaft shows the shaft, not the terrain's cone inside it. The run is
 # unchanged.
 --draw-ride-cuts-terrain
+# Each loaded square whose cell stores a water height gets one flat
+# translucent surface at that height in a plain colour of the viewer's
+# (cell_water_height_plane_v1): the river below the second bridge shows
+# water. The water type is not read; walking is unchanged.
+--draw-water
 # A blended effect surface whose soft flag is set fades toward the opaque
 # surface behind it over its stored soft falloff depth
 # (effect_soft_depth_fade_linear_v1): the distant cloud card's white edge

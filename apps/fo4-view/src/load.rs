@@ -1441,6 +1441,48 @@ pub fn cell<'s>(
             g.terrains.len(),
             pieces.join(", ")
         );
+        if drawing.water {
+            // `--draw-water` (`cell_water_height_plane_v1`): a surface over
+            // each loaded square whose cell stores a water height, tagged
+            // after the terrain's pieces.
+            let mut drawn = Vec::new();
+            let mut tag = last;
+            for p in &g.pieces {
+                let (Some(cell), Some(grid)) = (&p.cell, p.grid) else {
+                    continue;
+                };
+                let Some(w) = scoped(&budget, |b| fo4_scene::water::cell_water(store, cell, b))?
+                else {
+                    continue;
+                };
+                tag = tag.checked_add(1).ok_or("TerrainTagOverflow")?;
+                scoped(&budget, |b| {
+                    fo4_render::terrain::append_water(
+                        &mut build.list,
+                        grid,
+                        w.height,
+                        fo4_render::terrain::WATER_RGBA,
+                        tag,
+                        b,
+                    )
+                })?;
+                drawn.push(format!(
+                    "{grid:?} at {:.1}{}",
+                    w.height,
+                    if w.water.is_some() {
+                        " (type named)"
+                    } else {
+                        ""
+                    }
+                ));
+            }
+            println!(
+                "water drawn (cell_water_height_plane_v1): {} squares of {}; {}",
+                drawn.len(),
+                g.pieces.len(),
+                drawn.join(", ")
+            );
+        }
         println!(
             "terrain textures: {}; landscape textures {:?}; default textures {:?}",
             textured.join("; "),

@@ -135,6 +135,105 @@ pub fn append_terrain(
     )
 }
 
+/// The water surface's plain colour and opacity (linear RGBA, the alpha
+/// the blend's opacity): a viewer's choice of a muted blue-green, nothing
+/// read from a water record (`cell_water_height_plane_v1`).
+pub const WATER_RGBA: [f32; 4] = [0.10, 0.20, 0.22, 0.6];
+
+/// One flat water surface over the grid square `grid` (4096 units a side,
+/// south-west corner at `grid` times the side) at `height`, as two
+/// triangles of one plain colour blended over what lies behind
+/// (`cell_water_height_plane_v1`, fo4-view `--draw-water`): drawn
+/// two-sided, lit as the terrain, tagged `instance`.
+pub fn append_water(
+    list: &mut DrawList,
+    grid: [i32; 2],
+    height: f64,
+    rgba: [f32; 4],
+    instance: u32,
+    b: &Budget,
+) -> Result<()> {
+    if !height.is_finite() || rgba.iter().any(|c| !c.is_finite()) {
+        return Err(fo4_core::Error::new(
+            "InvalidWater",
+            "water",
+            0,
+            "a finite height and colour",
+            height,
+        ));
+    }
+    let side = fo4_scene::terrain::CELL_SIZE;
+    let (x0, y0) = (f64::from(grid[0]) * side, f64::from(grid[1]) * side);
+    let corner = |dx: f64, dy: f64| Vertex {
+        position: [x0 + dx * side, y0 + dy * side, height],
+        uv: [dx, dy],
+    };
+    let mut vertices = Vec::new();
+    b.reserve(&mut vertices, 4, "water", 0)?;
+    vertices.extend([
+        corner(0.0, 0.0),
+        corner(1.0, 0.0),
+        corner(1.0, 1.0),
+        corner(0.0, 1.0),
+    ]);
+    let mut triangles = Vec::new();
+    b.reserve(&mut triangles, 2, "water", 0)?;
+    triangles.extend([[0, 1, 2], [0, 2, 3]]);
+    let mut colours = Vec::new();
+    b.reserve(&mut colours, 4, "water", 0)?;
+    colours.extend([[1.0, 1.0, 1.0, 1.0]; 4]);
+    let texture = list.textures.len();
+    let mut texel = Vec::new();
+    b.reserve(&mut texel, 4, "water", 0)?;
+    texel.extend([rgba[0], rgba[1], rgba[2], 1.0]);
+    append(
+        &mut list.textures,
+        Texture {
+            mips: Vec::new(),
+            width: 1,
+            height: 1,
+            rgba: texel,
+            mip: 0,
+            srgb: false,
+        },
+        b,
+    )?;
+    let mesh = list.meshes.len();
+    append(
+        &mut list.meshes,
+        Mesh {
+            normals: None,
+            vertex_colors: Some(colours),
+            vertices,
+            triangles,
+        },
+        b,
+    )?;
+    append(
+        &mut list.draws,
+        Draw {
+            falloff: None,
+            palette: None,
+            colour: None,
+            sidedness: TWO_SIDED,
+            instance,
+            mesh,
+            texture,
+            world: Transform::IDENTITY,
+            alpha: Alpha {
+                enabled: 1,
+                opacity: rgba[3],
+                ..OPAQUE
+            },
+            uv_offset: [0.0, 0.0],
+            uv_scale: [1.0, 1.0],
+            raw_tile_flags: None,
+            soft_depth: None,
+        },
+        b,
+    )
+}
+
 const TWO_SIDED: Sidedness = Sidedness {
     material_two_sided: Some(1),
     nif_shader_flags_2: None,
@@ -846,6 +945,44 @@ fn pass(
 mod tests {
     use super::*;
     use fo4_plugin::land::{Heights, POINTS};
+
+    /// The 31st session's riverbed showed no water: a square whose cell
+    /// stores a water height now gets one blended flat surface over the
+    /// whole square at that height (`cell_water_height_plane_v1`).
+    #[test]
+    fn a_stored_water_height_draws_one_flat_blended_square() {
+        let b = Budget::new(1 << 20);
+        let mut list = DrawList::default();
+        append_water(&mut list, [-2, 3], 123.5, WATER_RGBA, 9, &b).unwrap();
+        assert_eq!(
+            (list.draws.len(), list.meshes.len(), list.textures.len()),
+            (1, 1, 1)
+        );
+        let d = &list.draws[0];
+        assert_eq!(d.instance, 9);
+        assert_eq!(
+            (d.alpha.enabled, d.alpha.source, d.alpha.destination),
+            (1, 6, 7)
+        );
+        assert!((d.alpha.opacity - WATER_RGBA[3]).abs() < 1e-6);
+        d.alpha.validate().unwrap();
+        list.validate_texture(0).unwrap();
+        let m = &list.meshes[0];
+        assert_eq!(m.triangles.len(), 2);
+        let xs: Vec<f64> = m.vertices.iter().map(|v| v.position[0]).collect();
+        let ys: Vec<f64> = m.vertices.iter().map(|v| v.position[1]).collect();
+        assert!(m.vertices.iter().all(|v| v.position[2] == 123.5));
+        let side = fo4_scene::terrain::CELL_SIZE;
+        let span = |v: &[f64]| {
+            (
+                v.iter().copied().fold(f64::MAX, f64::min),
+                v.iter().copied().fold(f64::MIN, f64::max),
+            )
+        };
+        assert_eq!(span(&xs), (-2.0 * side, -side));
+        assert_eq!(span(&ys), (3.0 * side, 4.0 * side));
+        assert!(append_water(&mut list, [0, 0], f64::NAN, WATER_RGBA, 10, &b).is_err());
+    }
     use fo4_scene::camera;
     use fo4_scene::terrain::Diagonal;
 

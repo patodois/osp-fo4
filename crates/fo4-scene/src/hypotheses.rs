@@ -494,6 +494,9 @@ pub const IMAGE_SPACE_CINEMATIC: &str = "image_space_cinematic_tint_v1";
 /// A lit surface lit with its mesh's vertex normals
 /// (`--light-vertex-normals`).
 pub const LIGHT_VERTEX_NORMALS: &str = "light_vertex_normals_v1";
+/// A loaded exterior square whose cell stores a water height drawn with a
+/// flat surface at that height (`crate::water`, fo4-view `--draw-water`).
+pub const CELL_WATER_PLANE: &str = "cell_water_height_plane_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -904,6 +907,7 @@ mod tests {
             IMAGE_SPACE_WHITE,
             IMAGE_SPACE_CINEMATIC,
             LIGHT_VERTEX_NORMALS,
+            CELL_WATER_PLANE,
             SWAP_FOLDER,
             OPACITY_ABOVE_ONE,
             BASE_PROPERTIES,

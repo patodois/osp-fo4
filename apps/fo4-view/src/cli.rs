@@ -300,6 +300,11 @@ usage:
       horizontal extent meets that part's box where it stands (pending
       rule play_ride_terrain_cut_v1): the ride down the shaft is not drawn
       through the terrain over it.
+      --draw-water (off by default; with --terrain) draws, over each
+      loaded exterior square whose cell stores a water height (XCLW), one
+      flat surface at that height in a plain translucent colour of the
+      viewer's (pending rule cell_water_height_plane_v1); the water type's
+      colours and shader are not read, and walking is unchanged.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -623,6 +628,11 @@ pub struct Drawing {
     /// stands are left out of the drawing
     /// (`crate::scene::ride_cut`, `crate::scene::terrain_kept`).
     pub ride_cuts_terrain: bool,
+    /// `--draw-water` (`cell_water_height_plane_v1`; with `--terrain`): each
+    /// loaded exterior square whose cell stores a water height (XCLW) gets
+    /// a flat blended surface of one plain colour at that height
+    /// (`fo4_scene::water`, `fo4_render::terrain::append_water`).
+    pub water: bool,
     /// `--draw-soft-effects` (`effect_soft_depth_fade_linear_v1`): a
     /// blended effect surface whose soft flag is set fades by its gap to
     /// the opaque depth behind it over its stored soft falloff depth
@@ -1150,6 +1160,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--draw-cast-settles" => drawing.cast_settles = true,
             "--draw-ride-cuts-terrain" => drawing.ride_cuts_terrain = true,
+            "--draw-water" => drawing.water = true,
             "--draw-soft-effects" => drawing.soft_effects = true,
             "--draw-effect-environment-left-out" => drawing.effect_environment_left_out = true,
             "--draw-refraction-left-out" => drawing.refraction_left_out = true,
@@ -1572,6 +1583,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.platform_skins && !scene.drawing.platforms {
         return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());
+    }
+    if scene.drawing.water && !scene.terrain {
+        return Err(
+            "--draw-water draws the water of the terrain's squares: it needs --terrain".into(),
+        );
     }
     if scene.drawing.ride_cuts_terrain && (scene.play_platforms.is_empty() || !scene.terrain) {
         return Err("--draw-ride-cuts-terrain leaves the terrain over a ride out of the scripted play window's drawing: it needs --terrain, --play-input or --play-keys, and --play-elevator".into());
@@ -2068,8 +2084,8 @@ mod tests {
         );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         assert!(scene.drawing.cast_on_platforms && scene.drawing.cast_keeps_part);
-        // Round 33: the hold at the land's edge.
-        assert!(p.switches.land_edge && p.switches.held_cue);
+        // Round 33: the water surfaces and the hold at the land's edge.
+        assert!(scene.drawing.water && p.switches.land_edge && p.switches.held_cue);
         assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots
             && a.look.head_race_fill
             && a.look.unread_slots
@@ -2507,6 +2523,7 @@ mod tests {
             "m d C --eye 1,2,3 --look 4,5,6 --bogus",
             "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --size 0x5",
             "m d C --eye 1,2,3 --look 4,5,6 --around 0",
+            "m d C --eye 1,2,3 --look 4,5,6 --draw-water",
             "m d C --eye 1,2,3 --look 4,5,6 --around 4",
             "m d C --eye 1,2,3 --look 4,5,6 --around x",
             "m d C --eye 1,2,3 --look 4,5,6 --around",

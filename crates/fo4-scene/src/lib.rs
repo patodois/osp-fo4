@@ -27,6 +27,7 @@ pub mod swap_pattern;
 pub mod terrain;
 pub mod timeline;
 pub mod transform;
+pub mod water;
 pub use assets::{
     Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset, KeptFiles,
     TextureSlot,
