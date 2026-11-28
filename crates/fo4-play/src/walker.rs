@@ -194,6 +194,10 @@ pub struct Options {
     /// `play_world_persistent_refs_walk_in_square_v1`,
     /// `--play-collision-persistent`).
     pub persistent: bool,
+    /// The small movable statics stay out of the walking worlds the walker
+    /// builds again ([`crate::world::Options::light_movables`];
+    /// `play_light_movable_static_passed_v1`, `--play-light-movables`).
+    pub light_movables: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -236,6 +240,7 @@ impl Default for Options {
             door_toggle_blocked: false,
             door_stored_open: false,
             persistent: false,
+            light_movables: false,
             stand: None,
             first_met: false,
             pick_actors: false,
@@ -334,6 +339,9 @@ pub struct Log {
     /// platform's state under the walker, (second, reference, what:
     /// [`platform_state`]).
     pub platforms: Vec<(f64, FormKey, String)>,
+    /// The light movable statics the walking worlds built left out
+    /// (`play_light_movable_static_passed_v1`), all builds together.
+    pub light_passed: std::collections::BTreeSet<FormKey>,
 }
 
 /// Why a held door's box entered or left the walking world
@@ -545,6 +553,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if o.persistent {
         out.insert(crate::rules::WORLD_PERSISTENT_COLLISION);
+    }
+    if o.light_movables {
+        out.insert(crate::rules::LIGHT_MOVABLE_PASSED);
     }
     if o.settings.step_lookahead_unless_climbed {
         out.insert(fo4_walk::rules::STEP_LOOKAHEAD);
@@ -2313,6 +2324,7 @@ impl Walker {
             door_open: self.opts.door_open,
             stored_open: self.opts.door_stored_open,
             persistent: self.opts.persistent,
+            light_movables: self.opts.light_movables,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -2339,6 +2351,10 @@ impl Walker {
         if let Some(f) = self.on_load.as_mut() {
             f(None);
         }
+        self.log
+            .borrow_mut()
+            .light_passed
+            .extend(built.light_passed.iter().cloned());
         let stats = self.live.stats.clone();
         self.live = match built.live.take() {
             Some((dormant, info)) => Live::new(

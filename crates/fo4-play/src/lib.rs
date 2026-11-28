@@ -237,8 +237,14 @@ pub mod rules {
     /// to the drawing: their collision stands as any loaded reference's
     /// (`--play-collision-persistent`).
     pub const WORLD_PERSISTENT_COLLISION: &str = "play_world_persistent_refs_walk_in_square_v1";
+    /// A placed reference whose base is a movable static (MSTT) and whose
+    /// object bounds, placed, are no longer than
+    /// `crate::world::LIGHT_MOVABLE_MAX` along any axis has no collision in
+    /// the walking world: the walker passes it, and it stays drawn
+    /// (`--play-light-movables`).
+    pub const LIGHT_MOVABLE_PASSED: &str = "play_light_movable_static_passed_v1";
     /// Every rule above.
-    pub const ALL: [&str; 35] = [
+    pub const ALL: [&str; 36] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -274,6 +280,7 @@ pub mod rules {
         DOOR_TOGGLE_BLOCKED,
         DOOR_STORED_OPEN,
         WORLD_PERSISTENT_COLLISION,
+        LIGHT_MOVABLE_PASSED,
     ];
 }
 

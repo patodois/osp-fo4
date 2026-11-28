@@ -99,6 +99,11 @@
 # walking world's cell builds, as the drawing joins them: the living room's
 # sofa and the nursery's crib stand (play_world_persistent_refs_walk_in_square_v1).
 --play-collision-persistent
+# A small movable static (bounds at most 64 units along every axis; the
+# limit is an assumption in place of a mass this project does not read) has
+# no collision: the walker passes a traffic cone, which stays drawn; statics
+# and larger movable statics still stop it (play_light_movable_static_passed_v1).
+--play-light-movables
 # A step-up retry with the tick's own move that does not climb is held back
 # while shorter retries ahead are tried: the walker climbs out of a shallow
 # dip in the road instead of sliding back into it every tick

@@ -211,6 +211,78 @@ pub struct Options {
     /// `--play-collision-persistent`). Off: a cell build reads its own
     /// groups only, as before.
     pub persistent: bool,
+    /// The placed references whose base is a movable static (MSTT) and
+    /// whose object bounds, placed, are at most [`LIGHT_MOVABLE_MAX`] along
+    /// every axis ([`light_movable`]) have no collision in the walking
+    /// world: the walker passes them; the drawing keeps them
+    /// (`play_light_movable_static_passed_v1`, `--play-light-movables`).
+    /// Off: their collision stands, as before.
+    pub light_movables: bool,
+}
+
+/// The longest extent (world units, along each of the object bounds' axes,
+/// times the reference's scale) a movable static may have for
+/// `play_light_movable_static_passed_v1` to let the walker pass it: an
+/// assumption standing in for a mass the project does not read (the
+/// physics system's mass properties are stored in a layout no public source
+/// gives). A traffic cone's bounds are about 43 by 43 by 45.
+pub const LIGHT_MOVABLE_MAX: f64 = 64.0;
+
+/// Whether a placed reference is a light movable static under
+/// `play_light_movable_static_passed_v1`: its base's record is a movable
+/// static (`MSTT`) and its object bounds (OBND, six i16: low and high
+/// corner in model units) times the reference's scale are at most
+/// [`LIGHT_MOVABLE_MAX`] along each axis. `None` bounds: not light (its
+/// size is not known).
+pub fn light_movable(signature: [u8; 4], bounds: Option<[i16; 6]>, scale: f64) -> bool {
+    let Some(b) = bounds else {
+        return false;
+    };
+    signature == *b"MSTT"
+        && (0..3).all(|i| {
+            let d = (f64::from(b[i + 3]) - f64::from(b[i])).abs() * scale.abs();
+            d <= LIGHT_MOVABLE_MAX
+        })
+}
+
+/// The light movable statics among `instances` (normalised keys) under
+/// `play_light_movable_static_passed_v1` ([`light_movable`]).
+pub fn light_movables(instances: &[fo4_scene::Instance]) -> std::collections::BTreeSet<FormKey> {
+    instances
+        .iter()
+        .filter(|i| {
+            i.base.as_ref().is_some_and(|b| {
+                light_movable(
+                    b.record.signature,
+                    b.common.bounds,
+                    f64::from(i.reference.data.scale.unwrap_or(1.0)),
+                )
+            })
+        })
+        .map(|i| norm(&i.reference.key))
+        .collect()
+}
+
+/// Takes the placed shapes of the references `out` names (normalised keys)
+/// out of a cell's collision before its walking world is built: (the
+/// references that had shapes, the number of shapes left out).
+pub fn leave_out_references(
+    c: &mut fo4_scene::collision::CellCollision,
+    out: &std::collections::BTreeSet<FormKey>,
+) -> (std::collections::BTreeSet<FormKey>, u64) {
+    let placements = &c.placements;
+    let before = c.instances.len();
+    let mut passed = std::collections::BTreeSet::new();
+    c.instances.retain(
+        |ci| match placements.get(ci.placement).map(|p| norm(&p.reference)) {
+            Some(r) if out.contains(&r) => {
+                passed.insert(r);
+                false
+            }
+            _ => true,
+        },
+    );
+    (passed, (before - c.instances.len()) as u64)
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -268,6 +340,9 @@ pub struct Built {
     /// stores `ONAM` (normalised keys), open for the held doors' reading
     /// from load (`play_door_stored_open_v1`).
     pub stored_open: std::collections::BTreeSet<FormKey>,
+    /// With [`Options::light_movables`]: the light movable statics whose
+    /// collision the build left out (`play_light_movable_static_passed_v1`).
+    pub light_passed: std::collections::BTreeSet<FormKey>,
 }
 
 /// Whether the placed reference `key` stores an `ONAM` subrecord (the
@@ -574,7 +649,16 @@ pub fn build(
         level,
         body_placement: None,
     };
-    let c = fo4_scene::collision::cell(&scene, &loader, limits, options, &budget)?;
+    let mut c = fo4_scene::collision::cell(&scene, &loader, limits, options, &budget)?;
+    // The light movable statics leave the collision before the world is
+    // built (`play_light_movable_static_passed_v1`); their drawing stays.
+    let mut light_counts: Option<(u64, u64)> = None;
+    let mut light_passed = std::collections::BTreeSet::new();
+    if o.light_movables {
+        let (passed, shapes) = leave_out_references(&mut c, &light_movables(&scene.instances));
+        light_counts = Some((passed.len() as u64, shapes));
+        light_passed = passed;
+    }
     let placement = c
         .body_placement
         .ok_or("PlayWalkWorld: no body placement level")?;
@@ -589,6 +673,18 @@ pub fn build(
     let mut refs = refs_before;
     refs.resize(world.sources.len(), None);
     let mut counts = BTreeMap::new();
+    if let Some((refs_passed, shapes)) = light_counts {
+        counts.insert(
+            "light movable statics passed (play_light_movable_static_passed_v1)\treferences"
+                .to_string(),
+            refs_passed,
+        );
+        counts.insert(
+            "light movable statics passed (play_light_movable_static_passed_v1)\tshapes"
+                .to_string(),
+            shapes,
+        );
+    }
     if let Some(j) = joined {
         for (what, n) in [
             ("joined as instances", j.added),
@@ -827,6 +923,7 @@ pub fn build(
             limits,
             &refs,
             placement,
+            o.light_movables,
             &mut counts,
             &budget,
         )?)
@@ -917,6 +1014,7 @@ pub fn build(
         closed_at_load,
         open_pose,
         stored_open,
+        light_passed,
     })
 }
 
@@ -932,6 +1030,7 @@ pub fn dormant(
     limits: &fo4_core::Limits,
     refs: &[Option<FormKey>],
     placement: fo4_scene::collision::BodyPlacement,
+    light: bool,
     counts: &mut BTreeMap<String, u64>,
     budget: &Budget,
 ) -> Result<(Piece, BTreeMap<FormKey, RefInfo>), E> {
@@ -998,6 +1097,13 @@ pub fn dormant(
         level: RuleLevel::Hypotheses,
         body_placement: Some(placement),
     };
+    // The light movable statics among them stay out of the dormant piece
+    // too (`play_light_movable_static_passed_v1`).
+    let light_set = if light {
+        light_movables(&dormant)
+    } else {
+        std::collections::BTreeSet::new()
+    };
     scene.instances = dormant;
     let built = fo4_scene::collision::cell(scene, loader, limits, options, budget);
     // Put the scene back as it was, whatever the build gave.
@@ -1014,7 +1120,16 @@ pub fn dormant(
         .into_iter()
         .map(|s| s.unwrap_or_else(|| back.next().expect("a moved instance")))
         .collect();
-    let dc = built?;
+    let mut dc = built?;
+    if light {
+        let (r, shapes) = leave_out_references(&mut dc, &light_set);
+        *counts
+            .entry("live world: light movable statics passed (play_light_movable_static_passed_v1)\treferences".into())
+            .or_default() += r.len() as u64;
+        *counts
+            .entry("live world: light movable statics passed (play_light_movable_static_passed_v1)\tshapes".into())
+            .or_default() += shapes;
+    }
     let world = World::build(&dc, placement, budget)?;
     let drefs = pick::references(&world, &dc);
     for i in &dormant {
@@ -1115,6 +1230,84 @@ mod tests {
     /// whose reference stores the word of a layer a walking character
     /// passes stays out; a box with
     /// no word, or another word, stands; without it every box stands.
+    /// The 30th sessions: a traffic cone (a movable static about 43 by 43
+    /// by 45 units) on the line to the lift's apron held the walker; the
+    /// crate beside it (a static) must still hold it.
+    #[test]
+    fn a_small_movable_static_is_light_and_a_static_or_a_large_one_is_not() {
+        let cone = Some([-21, -21, 0, 22, 22, 45]);
+        assert!(light_movable(*b"MSTT", cone, 1.0));
+        // A static of the same size, a large movable static, a scaled-up
+        // cone, a movable static of unknown size: not light.
+        assert!(!light_movable(*b"STAT", cone, 1.0));
+        assert!(!light_movable(
+            *b"MSTT",
+            Some([-60, -35, 0, 60, 35, 41]),
+            1.0
+        ));
+        assert!(!light_movable(*b"MSTT", cone, 2.0));
+        assert!(!light_movable(*b"MSTT", None, 1.0));
+        // Exactly the limit is light.
+        let edge = LIGHT_MOVABLE_MAX as i16;
+        assert!(light_movable(
+            *b"MSTT",
+            Some([0, 0, 0, edge, edge, edge]),
+            1.0
+        ));
+        assert!(!light_movable(
+            *b"MSTT",
+            Some([0, 0, 0, edge + 1, 1, 1]),
+            1.0
+        ));
+    }
+
+    /// Only the shapes of the references named leave the cell's collision.
+    #[test]
+    fn leaving_references_out_takes_only_their_shapes() {
+        use fo4_scene::collision::{CellCollision, CollisionInstance, ModelPlacement, ShapeClass};
+        let t = fo4_scene::transform::Transform {
+            rotation: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            translation: [0.0; 3],
+            scale: 1.0,
+        };
+        let key = |id: u32| FormKey {
+            plugin: "a.esm".into(),
+            object_id: id,
+        };
+        let placement = |id: u32| ModelPlacement {
+            reference: key(id),
+            base: key(100 + id),
+            model: 0,
+            frame: t,
+            scene_rules: Vec::new(),
+        };
+        let shape = |placement: usize| CollisionInstance {
+            placement,
+            body: 0,
+            leaf: 0,
+            kind: ShapeClass::ConvexPolytope,
+            world: t,
+            rules: Vec::new(),
+        };
+        let mut c = CellCollision {
+            level: fo4_scene::RuleLevel::default(),
+            body_placement: None,
+            models: Vec::new(),
+            placements: vec![placement(1), placement(2)],
+            instances: vec![shape(0), shape(1), shape(0), shape(1)],
+            unplaced: Vec::new(),
+            without_collision: Vec::new(),
+        };
+        let out = std::collections::BTreeSet::from([norm(&key(2))]);
+        assert_eq!(leave_out_references(&mut c, &out), (out.clone(), 2));
+        assert!(c.instances.iter().all(|i| i.placement == 0));
+        assert_eq!(c.instances.len(), 2);
+        assert_eq!(
+            leave_out_references(&mut c, &std::collections::BTreeSet::new()),
+            (std::collections::BTreeSet::new(), 0)
+        );
+    }
+
     #[test]
     fn a_box_on_a_passed_layer_stays_out_only_with_the_reading() {
         let item_pick = marker(Some(40));

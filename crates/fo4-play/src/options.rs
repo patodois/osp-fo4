@@ -92,6 +92,8 @@ pub struct Play {
     /// `--play-collision-persistent`
     /// (`play_world_persistent_refs_walk_in_square_v1`).
     pub persistent: bool,
+    /// `--play-light-movables` (`play_light_movable_static_passed_v1`).
+    pub light_movables: bool,
     /// `--play-step-lookahead` (`fo4_walk`'s
     /// `walk_step_lookahead_unless_climbed_v1`): the walker's step-up tries
     /// the retries ahead before it takes a retry that does not climb.
@@ -215,6 +217,7 @@ impl Play {
             "--play-collision-furniture-fields" => &mut self.furniture_fields,
             "--play-collision-furniture-at-rest" => &mut self.furniture_at_rest,
             "--play-collision-persistent" => &mut self.persistent,
+            "--play-light-movables" => &mut self.light_movables,
             "--play-step-lookahead" => &mut self.step_lookahead,
             "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-marker-box-layers" => &mut self.marker_box_layers,
@@ -542,6 +545,7 @@ impl Play {
             door_open: self.door_open,
             stored_open: self.door_stored_open,
             persistent: self.persistent,
+            light_movables: self.light_movables,
         }
     }
 
@@ -579,6 +583,7 @@ impl Play {
             door_toggle_blocked: self.door_toggle_blocked,
             door_stored_open: self.door_stored_open,
             persistent: self.persistent,
+            light_movables: self.light_movables,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -652,6 +657,7 @@ impl Play {
             closed_at_load,
             open_pose,
             stored_open,
+            light_passed,
         } = built;
         let _ = writeln!(
             report,
@@ -676,6 +682,9 @@ impl Play {
         }
         if self.persistent {
             let _ = writeln!(report, "switch: the worldspace's persistent references standing in the loaded grid squares join each walking world's cell build, their collision as any loaded reference's (--play-collision-persistent, {})", crate::rules::WORLD_PERSISTENT_COLLISION);
+        }
+        if self.light_movables {
+            let _ = writeln!(report, "switch: a placed movable static whose object bounds are at most {} units along every axis has no collision in the walking world; it stays drawn (--play-light-movables, {})", crate::world::LIGHT_MOVABLE_MAX, crate::rules::LIGHT_MOVABLE_PASSED);
         }
         if self.step_lookahead {
             let _ = writeln!(report, "switch: the walker's step-up tries the retries one radius, half and a quarter of a radius ahead before it takes a retry with the tick's own move that does not climb (--play-step-lookahead, {})", fo4_walk::rules::STEP_LOOKAHEAD);
@@ -836,6 +845,7 @@ impl Play {
             w = w.with_boxes(boxes);
         }
         self.run_lines(report);
+        w.log.borrow_mut().light_passed.extend(light_passed);
         Ok(w)
     }
 

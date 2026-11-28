@@ -91,6 +91,14 @@ pub fn walker(l: &Log, report: &mut String) {
             "wall: blocked from {from} to {to} s ({n} ticks) against {what} (--play-report-walls)"
         );
     }
+    if !l.light_passed.is_empty() {
+        let _ = writeln!(
+            report,
+            "light movable statics passed: {} references in the walking worlds built ({})",
+            l.light_passed.len(),
+            crate::rules::LIGHT_MOVABLE_PASSED
+        );
+    }
     for (t, k, what) in &l.platforms {
         let _ = writeln!(
             report,
