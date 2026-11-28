@@ -1,4 +1,4 @@
-//! The water an exterior cell's record stores (`spec/water.md`): the
+//! The water an exterior cell's record stores (`spec/play.md`, *Water*): the
 //! water height (XCLW, a little-endian f32; xEdit's published name "Water
 //! Height", layout in `spec/record-layouts.md#cell-xclw`) and the water
 //! type (XCWT, a form id of a WATR record). What the game draws or does
