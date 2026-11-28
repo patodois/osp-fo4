@@ -1024,6 +1024,7 @@ pub fn build(
 /// placed reference) and of the instances an enable parent disables at
 /// load (built as if enabled), in one world, and every reference's chain,
 /// stored position and sources. The scene is left as it was.
+#[allow(clippy::too_many_arguments)]
 pub fn dormant(
     loader: &mut Loader<'_>,
     scene: &mut fo4_scene::Scene,

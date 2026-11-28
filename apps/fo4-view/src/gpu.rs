@@ -1596,6 +1596,7 @@ fn readout(fly: &Fly, walk: Option<&Walk>, input: FlyInput) -> String {
 /// rising surface deck the title read the eye of the frame before, at the
 /// load door's place, while the picture was the shaft). Text with no eye
 /// field is returned as it is.
+#[cfg(feature = "script-event")]
 fn readout_with_eye(text: &str, eye: [f64; 3]) -> String {
     const FIELD: &str = " | eye ";
     let Some(at) = text.find(FIELD) else {
@@ -5307,6 +5308,7 @@ mod tests {
     /// deck). The play mode writes the eye it sets the camera to into the
     /// readout of the same frame.
     #[test]
+    #[cfg(feature = "script-event")]
     fn the_title_names_the_eye_the_frame_draws_from() {
         let fly = |eye: [f64; 3]| {
             let state = FlyState {

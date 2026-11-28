@@ -610,7 +610,8 @@ mod tests {
     fn the_deck_a_load_door_puts_the_walker_on_counts_its_own_rise() {
         let feet = [50.0, 50.0, 140.0];
         let rising = deck(true, None, Some(1703.9));
-        let (cue, kept) = platform_status(&[rising.clone()], feet, 1692.5, Some(1692.1));
+        let (cue, kept) =
+            platform_status(std::slice::from_ref(&rising), feet, 1692.5, Some(1692.1));
         assert_eq!(cue.as_deref(), Some("platform moving - ready in 12 s"));
         assert_eq!(kept, Some(1703.9));
         let (cue, _) = platform_status(&[rising], feet, 1698.0, kept);
