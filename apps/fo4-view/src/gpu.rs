@@ -198,6 +198,13 @@ fn soft_depth_camera() -> (Camera3d, SoftDepthCamera) {
     )
 }
 
+/// Added to a terrain texture pass's view distance in Bevy's sort of the
+/// blended surfaces (distances grow toward the eye, sorted ascending): far
+/// beyond any loaded view, so every pass is drawn before every other
+/// blended surface, and small enough that f32 keeps whole units of
+/// distance among the passes themselves.
+pub const OVERLAY_SORT_BIAS: f32 = -8.0e6;
+
 /// Uniform block of `surface.wesl` (`SurfaceParams`), field for field.
 #[derive(Clone, Copy, Debug, ShaderType)]
 pub struct SurfaceUniform {
@@ -307,6 +314,18 @@ impl Material for SurfaceMaterial {
             AlphaMode::Blend
         } else {
             AlphaMode::Opaque
+        }
+    }
+    /// The terrain's texture passes (overlays) sort before every other
+    /// blended surface ([`OVERLAY_SORT_BIAS`]), as the CPU frame draws them
+    /// first: they only add to the terrain's colour where the terrain is
+    /// the nearest opaque surface, and the water and every other blended
+    /// surface blend over the finished terrain, whatever their distance.
+    fn depth_bias(&self) -> f32 {
+        if self.key.surface.overlay && !self.key.tag_pass {
+            OVERLAY_SORT_BIAS
+        } else {
+            0.0
         }
     }
     fn enable_prepass() -> bool {

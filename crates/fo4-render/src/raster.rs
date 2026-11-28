@@ -1158,9 +1158,14 @@ pub fn render_lit(
             draw_lights.push(draw_light);
         }
     }
+    // The terrain's texture passes (overlays) first: they only add to the
+    // terrain's own colour where the terrain is the nearest opaque surface,
+    // so every other blended surface (water among them) blends over the
+    // finished terrain, whatever its distance; then back to front.
     transparent.sort_unstable_by(|a, b| {
-        b.distance
-            .total_cmp(&a.distance)
+        list.is_overlay(b.draw)
+            .cmp(&list.is_overlay(a.draw))
+            .then(b.distance.total_cmp(&a.distance))
             .then(a.ordinal.cmp(&b.ordinal))
     });
     for t in transparent {

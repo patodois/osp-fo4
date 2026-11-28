@@ -2453,3 +2453,125 @@ fn a_close_wall_far_from_the_origin_is_lit_without_column_streaks() {
         "neighbour step cpu {cpu_step} gpu {gpu_step}"
     );
 }
+
+/// The 32nd session saw the river's tint change along straight lines:
+/// Bevy sorted the terrain's texture passes with the water by the middle of
+/// each one's mesh, so a quadrant's pass nearer than the water square's
+/// middle added its texture over the water. The passes now sort before
+/// every other blended surface: on the GPU as in the CPU frame, the water
+/// darkens a pass's strip as it darkens the plain ground beyond it. Needs a
+/// GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn water_blends_over_every_terrain_texture_pass_on_the_gpu() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    let side = fo4_scene::terrain::CELL_SIZE;
+    let strip = |y: [f64; 2]| [[0.0, y[0]], [side, y[0]], [side, y[1]], [0.0, y[1]]];
+    // The ground of two strips, the near one's vertices shared by the pass
+    // (as a terrain's passes repeat its triangles).
+    let mesh = |strips: &[[[f64; 2]; 4]], alpha: f32| Mesh {
+        normals: None,
+        vertex_colors: Some(vec![[1.0, 1.0, 1.0, alpha]; 4 * strips.len()]),
+        vertices: strips
+            .iter()
+            .flatten()
+            .map(|[x, y]| Vertex {
+                position: [*x, *y, 0.0],
+                uv: [0.0, 0.0],
+            })
+            .collect(),
+        triangles: (0..strips.len() as u16)
+            .flat_map(|k| [[0, 1, 2], [0, 2, 3]].map(|t| t.map(|i| 4 * k + i)))
+            .collect(),
+    };
+    let plain = |v: f32| Texture {
+        mips: Vec::new(),
+        width: 1,
+        height: 1,
+        rgba: vec![v, v, v, 1.0],
+        mip: 0,
+        srgb: false,
+    };
+    let draw = |mesh: usize, enabled: u8, destination: u32| Draw {
+        falloff: None,
+        palette: None,
+        colour: None,
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance: mesh as u32,
+        mesh,
+        texture: mesh,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha: Alpha {
+            enabled,
+            source: 6,
+            destination,
+            test_enabled: 0,
+            test_ref: 0,
+            nif_test_function: None,
+            opacity: 1.0,
+            nif_flags: None,
+        },
+        uv_offset: [0.0, 0.0],
+        uv_scale: [1.0, 1.0],
+        raw_tile_flags: None,
+        soft_depth: None,
+    };
+    let list = |water: bool| {
+        let mut l = DrawList {
+            meshes: vec![
+                mesh(&[strip([0.0, 600.0]), strip([600.0, side])], 1.0),
+                mesh(&[strip([0.0, 600.0])], 0.5),
+            ],
+            textures: vec![plain(0.3), plain(0.4)],
+            // The ground, then its additive texture pass (an overlay).
+            draws: vec![draw(0, 0, 7), draw(1, 1, 0)],
+            overlays: vec![1],
+            ..DrawList::default()
+        };
+        if water {
+            fo4_render::terrain::append_water(
+                &mut l,
+                [0, 0],
+                10.0,
+                [0.0, 0.0, 0.0, 0.6],
+                9,
+                &fo4_core::Budget::new(1 << 20),
+            )
+            .unwrap();
+        }
+        l
+    };
+    let camera = fo4_scene::camera::look_at(
+        [2048.0, -300.0, 400.0],
+        [2048.0, 1500.0, 0.0],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let red = |list: &mut DrawList, p: [f64; 3]| -> f32 {
+        let mut scene = crate::scene::convert(list, &options).unwrap();
+        let f = headless(&mut scene, &camera, [0., 0., 0., 1.], false).unwrap();
+        let at = camera.project(p).unwrap().unwrap().pixel;
+        let i = (at[1] as usize * SIZE[0] as usize + at[0] as usize) * 4;
+        f32::from(f.color[i]) / 255.0
+    };
+    let (on, off) = ([2048.0, 400.0, 0.0], [2048.0, 900.0, 0.0]);
+    let dry_step = red(&mut list(false), on) - red(&mut list(false), off);
+    let wet_step = red(&mut list(true), on) - red(&mut list(true), off);
+    println!(
+        "dry {} {}, wet {} {}",
+        red(&mut list(false), on),
+        red(&mut list(false), off),
+        red(&mut list(true), on),
+        red(&mut list(true), off)
+    );
+    println!("dry step {dry_step}, wet step {wet_step}");
+    assert!(dry_step > 0.1, "{dry_step}");
+    // Water of opacity 0.6 keeps 0.4 of what lies under it (within the
+    // frame's 8-bit steps).
+    assert!((wet_step - 0.4 * dry_step).abs() < 0.02, "{wet_step}");
+}

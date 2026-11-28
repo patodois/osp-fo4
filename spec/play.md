@@ -2532,6 +2532,25 @@ the cell's scene, 0.5 s reading its collision, 1.7 s for the markers and doors, 
 square by the first bridge 9.2 s, 8.0 s of it loading the nine cells' scene. A memo of parsed collision models
 would cut little; each walking world builds its scene with a new loader.
 
+### The river's seams, the low obstacle, the load's join and the moving hold (the thirty-second-session step)
+
+**The river's straight seams.** Downstream of the larger bridge the water's tint changed along straight lines.
+Every loaded square there stores the same height (7250 in the window log; no step), and no square is drawn twice:
+a load's draws replace the ones before as they are drawn. The lines were the terrain's quadrants: each texture
+pass of a terrain quadrant is a blended draw (`DrawList::overlays`), and the window sorted those passes together
+with the water by the middle of each mesh, so a pass whose quadrant's middle stood nearer the eye than the water
+square's middle added its texture over the water. The edges of the quadrants, 2048 units apart, showed as straight
+lines (a headless frame at the person's eye reproduces it, and a frame from above shows one line across the
+square). The passes now come before every other blended surface: on the GPU they sort with a bias far beyond any
+view (`gpu::OVERLAY_SORT_BIAS`, `Material::depth_bias`), and the CPU frame emits them before the other blended
+triangles (`fo4_render::raster`). That is no rule: a pass only adds to the terrain's colour where the terrain is
+the nearest opaque surface, so drawing the passes first changes nothing but what was blended out of order.
+Neighbouring squares whose stored heights differ still meet in a step (none was found at the session's places);
+a square whose cell stores no water next to one that does ends the surface at the square's edge (at the person's
+place the land rises above the water there). With the eye below the surface the water's underside, drawn
+two-sided, tints everything above it and nothing below it; nothing else changes (no rule about swimming; the
+walker's eye stood at least 38 units above the surface in the session).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

@@ -986,6 +986,115 @@ mod tests {
     use fo4_scene::camera;
     use fo4_scene::terrain::Diagonal;
 
+    /// A ground of two opaque grey strips over grid square [0, 0], one
+    /// additive texture pass (an overlay, as the terrain's passes are) on
+    /// its near strip, and, with `water`, the square's water 10 units above.
+    fn ground_pass_and_water(water: bool) -> DrawList {
+        let b = Budget::new(1 << 20);
+        let side = fo4_scene::terrain::CELL_SIZE;
+        let strip = |y: [f64; 2]| [[0.0, y[0]], [side, y[0]], [side, y[1]], [0.0, y[1]]];
+        // The ground of two strips, the near one's vertices shared by the pass
+        // (as a terrain's passes repeat its triangles).
+        let mesh = |strips: &[[[f64; 2]; 4]], alpha: f32| Mesh {
+            normals: None,
+            vertex_colors: Some(vec![[1.0, 1.0, 1.0, alpha]; 4 * strips.len()]),
+            vertices: strips
+                .iter()
+                .flatten()
+                .map(|[x, y]| Vertex {
+                    position: [*x, *y, 0.0],
+                    uv: [0.0, 0.0],
+                })
+                .collect(),
+            triangles: (0..strips.len() as u16)
+                .flat_map(|k| [[0, 1, 2], [0, 2, 3]].map(|t| t.map(|i| 4 * k + i)))
+                .collect(),
+        };
+        let plain = |v: f32| Texture {
+            mips: Vec::new(),
+            width: 1,
+            height: 1,
+            rgba: vec![v, v, v, 1.0],
+            mip: 0,
+            srgb: false,
+        };
+        let draw = |mesh: usize, alpha: Alpha| Draw {
+            falloff: None,
+            palette: None,
+            colour: None,
+            sidedness: TWO_SIDED,
+            instance: mesh as u32,
+            mesh,
+            texture: mesh,
+            world: Transform::IDENTITY,
+            alpha,
+            uv_offset: [0.0, 0.0],
+            uv_scale: [1.0, 1.0],
+            raw_tile_flags: None,
+            soft_depth: None,
+        };
+        let mut list = DrawList {
+            meshes: vec![
+                mesh(&[strip([0.0, 600.0]), strip([600.0, side])], 1.0),
+                mesh(&[strip([0.0, 600.0])], 0.5),
+            ],
+            textures: vec![plain(0.3), plain(0.4)],
+            draws: vec![draw(0, OPAQUE), draw(1, ADDITIVE)],
+            overlays: vec![1],
+            ..DrawList::default()
+        };
+        if water {
+            append_water(&mut list, [0, 0], 10.0, [0.0, 0.0, 0.0, 0.6], 9, &b).unwrap();
+        }
+        list
+    }
+
+    /// The 32nd session saw the river's tint change along straight lines:
+    /// the terrain's texture passes were sorted with the water by distance,
+    /// so a pass whose triangles stood nearer than the water's added its
+    /// texture over the water, square by square and quadrant by quadrant.
+    /// The passes now come first: the water darkens the pass's strip as it
+    /// darkens the plain ground beside it.
+    #[test]
+    fn water_blends_over_every_terrain_texture_pass_whatever_its_distance() {
+        let size = [160, 90];
+        let cam = camera::look_at(
+            [2048.0, -300.0, 400.0],
+            [2048.0, 1500.0, 0.0],
+            camera::reference_frustum(size),
+            size,
+        )
+        .unwrap();
+        let options = crate::RenderOptions {
+            workers: 1,
+            clear: [0.0, 0.0, 0.0, 1.0],
+            bilinear: false,
+            backface_cull: false,
+        };
+        let pixel = |list: &DrawList, p: [f64; 3]| -> f32 {
+            let f = crate::render(
+                list,
+                &cam,
+                options,
+                &fo4_core::Limits::default(),
+                &Budget::new(64 << 20),
+            )
+            .unwrap();
+            let at = cam.project(p).unwrap().unwrap().pixel;
+            f.color[at[1] as usize * size[0] as usize + at[0] as usize][0]
+        };
+        // On the pass's strip and on the plain ground beyond it.
+        let (on, off) = ([2048.0, 400.0, 0.0], [2048.0, 900.0, 0.0]);
+        let dry = ground_pass_and_water(false);
+        let wet = ground_pass_and_water(true);
+        let dry_step = pixel(&dry, on) - pixel(&dry, off);
+        let wet_step = pixel(&wet, on) - pixel(&wet, off);
+        assert!((dry_step - 0.2).abs() < 1e-3, "{dry_step}");
+        // Water of opacity 0.6 keeps 0.4 of what lies under it.
+        assert!((wet_step - 0.4 * dry_step).abs() < 1e-3, "{wet_step}");
+        assert!((pixel(&wet, off) - 0.4 * 0.3).abs() < 1e-3);
+    }
+
     fn terrain() -> Terrain {
         // A slope rising to the east by one unit (8 world units) per vertex.
         let mut gradient = vec![1i8; POINTS];
