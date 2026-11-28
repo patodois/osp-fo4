@@ -5335,8 +5335,8 @@ mod tests {
                 start_walking: false,
             }
         };
-        let before = [-88744.7, 90515.3, 9041.5];
-        let now = [-88744.7, 90515.3, 7335.6];
+        let before = [-120.5, 340.5, 900.5];
+        let now = [-120.5, 340.5, 700.5];
         let built = format!(
             "{} | run 1692.5 s | stage",
             readout(&fly(before), None, FlyInput::default())
@@ -5349,11 +5349,11 @@ mod tests {
                 readout(&fly(now), None, FlyInput::default())
             )
         );
-        assert!(fixed.contains("eye -88744.7, 90515.3, 7335.6 | run"));
+        assert!(fixed.contains("eye -120.5, 340.5, 700.5 | run"));
         // The eye last in the text, and a text without one.
         assert!(
             readout_with_eye("fo4-view | fly | 300 u/s | eye 1.0, 2.0, 3.0", now)
-                .ends_with("eye -88744.7, 90515.3, 7335.6")
+                .ends_with("eye -120.5, 340.5, 700.5")
         );
         assert_eq!(
             readout_with_eye("fo4-view | walk | feet", now),
