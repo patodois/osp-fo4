@@ -181,6 +181,9 @@ fn run() -> Result<(), E> {
     for (k, v) in &built.counts {
         println!("count\t{k}\t{v}");
     }
+    for k in &built.light_passed {
+        println!("light passed\t{}", key(k));
+    }
     let world = &built.world;
     let label = |w: &fo4_walk::World, refs: &[Option<FormKey>], s: u32| {
         let src = &w.sources[s as usize];
