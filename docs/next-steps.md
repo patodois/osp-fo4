@@ -478,6 +478,22 @@ own refusals (collision build, persistent join: a reference's data limit is that
 vault table is not seen; the containers' fields (drawing and collision together); a memo of parsed collision models
 for the dream's hold; the player's pod drawn open.
 
+Thirty-first-round fixes (the twenty-ninth sessions): the new stops on clear ground are not round 30's step
+look-ahead: the same record replayed with `--play-step-lookahead` off stops at the same three places within a unit,
+each a drawn shape below the eye's frame (a 45-unit movable static wedging the walker against a barrier's rail or a
+crate, a rock's mesh sliding it into a 52-degree terrain slope); nothing changed for them. The stop on the line to
+the control-room stairs is the same kind: the vault table round 30 called invisible is drawn where its collision
+stands (a narrow panel 72 units high, seen when the eye looks down; its texture's alpha passes the test on 99.7% of
+its texels, so round 30's alpha reading is refuted); nothing changed. The eye's drop back into the shaft after the
+first daylight was the handoff: the door to the surface puts the walker where the lift's deck arrives at its rise's
+last key while the deck is still at the shaft's bottom; `--play-elevator-door-arrival`
+(`play_elevator_door_arrival_on_ride_v1`, in the preset) puts the walker on the deck where it stands and it rides up
+(the 29th A replayed: the same 274 stages, the eye rising without a drop). The platform cue on a settled deck read
+the end of the deck's whole sequence (the grille's column still moving); it now counts the carrying part's own
+motion (`Platform::carried_until`). Next: a status cue when the walker is held by a shape below the eye's frame (the
+three stops above and the table), the containers' fields (drawing and collision together), the water planes, the
+player's pod drawn open, a memo of parsed collision models for the dream's hold.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
