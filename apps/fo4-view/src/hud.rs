@@ -324,19 +324,21 @@ pub fn platform_status(
 /// round 33 (the 31st session's person pressed 1.6 s against a pier and
 /// the walker was held for the last 0.8 s of it, too short for a second).
 pub const HELD_SECONDS: f64 = 0.5;
-/// The height above the feet (units) at or below which the top of what
-/// holds the walker is a "low obstacle": two fifths of the 120-unit eye
-/// height, about knee height. Viewer policy, nothing about the game.
-pub const HELD_LOW: f64 = 48.0;
+/// The height above the feet (units) at or below which what holds the
+/// walker is a "low obstacle": a knee's height for a figure whose eye
+/// stands at the walker's 120 units (knee height about 0.285 of stature,
+/// eye height about 0.936 of it, as human body proportions go: 120 x 0.285
+/// / 0.936 = 36.5). Viewer policy, nothing about the game. Round 33 used two
+/// fifths of the eye height, 48, read against the one primitive met last.
+pub const HELD_LOW: f64 = 36.0;
 
 /// The status line's held cue (`--play-held-cue`, a viewer aid that
 /// claims nothing about the game): `held`, the second the walker's hold
-/// against a blocking shape began and how far the top of the primitive it
-/// last met stands above its feet (`fo4_play::walker::Held::since` and
-/// `top`). After [`HELD_SECONDS`] without progress, "blocked - low
-/// obstacle" when the top of
-/// the primitive it last met stands at most [`HELD_LOW`] above its feet,
-/// "blocked" otherwise (or when the top is not known); `None` before. No
+/// against a blocking shape began and how high above its feet the shapes
+/// holding it reach (`fo4_play::walker::Held::since` and `top`, the highest
+/// contact: `fo4_play::walker::held_top`). After [`HELD_SECONDS`] without
+/// progress, "blocked - low obstacle" when that is at most [`HELD_LOW`],
+/// "blocked" otherwise (or when it is not known); `None` before. No
 /// object is named: the cue says why the walker stands when the cause may
 /// lie below the eye's frame. `edge` (`fo4_play::walker::Held::edge`): the
 /// walker was last held at the edge of the loaded land
@@ -588,6 +590,23 @@ mod tests {
             held_status(Some(held(Some(HELD_LOW))), 12.0).as_deref(),
             Some("blocked - low obstacle")
         );
+    }
+
+    /// The 32nd sessions: `blocked - low obstacle` against a barricade's
+    /// rail and post, whose shapes reach 84 to 100 units above the feet
+    /// (the top of the capsule's core) though one board's box stood about 30
+    /// units up,
+    /// and against a bank whose lip reaches 31. Both sides of the knee: the
+    /// bank is low, the rail is not, and what stood between round 33's 48
+    /// and a knee (40.8 at a statue's base) is no longer called low.
+    #[test]
+    fn low_obstacle_is_said_only_below_the_knee() {
+        let held = |top: f64| held_status(Some((10.0, Some(top), false)), 11.0);
+        assert_eq!(held(30.9).as_deref(), Some("blocked - low obstacle"));
+        assert_eq!(held(36.0).as_deref(), Some("blocked - low obstacle"));
+        assert_eq!(held(40.8).as_deref(), Some("blocked"));
+        assert_eq!(held(84.6).as_deref(), Some("blocked"));
+        assert_eq!(held(100.0).as_deref(), Some("blocked"));
     }
 
     /// Replayed, the 30th session's A tapped the key a second against the

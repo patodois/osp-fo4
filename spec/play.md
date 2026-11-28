@@ -2500,7 +2500,8 @@ blocking: the crate beside it still stops the walker.
 *Held below the frame.* `--play-held-cue` (a viewer aid, no rule): the walker keeps its hold
 (`fo4_play::walker::Held`, `next_held`: a blocked tick with a direction key held, the feet within 8 units across
 since) and the window's status line says `blocked` after half a second, `blocked - low obstacle` when the top of
-the primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`), `blocked - no
+the primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`; since round 34
+the highest contact and 36 units, below), `blocked - no
 ground beyond` when the tick was held at the land's edge (below); the line stays up to 8 s after the key is let go
 while the feet stay within 8 units (`hud::held_cue`), on a row of its own below the objective (`hud::STATUS_ROW`).
 It names nothing. Round 33 read the 31st session's window log: the line was on at every push the person reported
@@ -2550,6 +2551,19 @@ a square whose cell stores no water next to one that does ends the surface at th
 place the land rises above the water there). With the eye below the surface the water's underside, drawn
 two-sided, tints everything above it and nothing below it; nothing else changes (no rule about swimming; the
 walker's eye stood at least 38 units above the surface in the session).
+
+**`low obstacle` for what is not low.** The cue took the top of the box of the one primitive the tick met last.
+The barricade's rail is a row of convex pieces, each post its own piece about 105 units tall and each board its own
+piece about 18 units tall whose box tops stand about 30 units above the feet; a rock's or a machine's mesh is one
+primitive a triangle, and the triangle met last is often a low one. Replayed with `--play-report-walls`, the 32nd's
+B was held at the rail end against shapes that reach the top of the capsule's core (100 units) and 85 units, at the bank's lip
+against 31 units. The cue now reads the highest contact (`fo4_play::walker::held_top`,
+`fo4_walk::WorldSet::highest_steep_touch`): the capsule's core sampled every 2 units from bottom to top, each sample
+a sphere of the capsule's radius, and of every primitive too steep to stand on that comes within a unit of one, the
+point of its surface nearest that sample; the highest such point above the feet. `blocked - low obstacle` when it
+is at most 36 units (`hud::HELD_LOW`: a knee for a figure whose eye stands at the walker's 120 units, by the body's
+usual proportions, knee 0.285 and eye 0.936 of stature; a viewer aid, nothing about the game), `blocked` otherwise.
+`--play-report-walls` adds the same height to each stretch it reports.
 
 ## What the play mode does not do yet
 

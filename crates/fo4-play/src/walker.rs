@@ -292,6 +292,30 @@ pub trait Arrivals {
 /// began for the hold to end ([`next_held`]; viewer aid, no rule).
 pub const HELD_PROGRESS: f64 = 8.0;
 
+/// How far (units) beyond the capsule a shape may stand and still count as
+/// touching it for [`held_top`]: the controller pushes a held capsule out
+/// to the shape's surface, so a unit takes every shape that holds it.
+pub const HELD_TOUCH: f64 = 1.0;
+
+/// How high above `feet` the shapes holding the walker reach (the held
+/// cue's "low obstacle", a viewer aid): the highest point at which a
+/// primitive too steep to stand on (beyond the walker's slope limit)
+/// touches the capsule standing at `feet`, within [`HELD_TOUCH`]
+/// ([`fo4_walk::WorldSet::highest_steep_touch`]); `None` when none does.
+/// Before round 34 this was the top of the box of the one primitive the
+/// tick met last: one low triangle of a tall rock's or machine's mesh, or
+/// a rail's low hull beside its post, read as a low obstacle.
+pub fn held_top<K: Ord>(
+    space: &fo4_walk::WorldSet<K>,
+    c: &Character,
+    feet: [f64; 3],
+) -> Option<f64> {
+    let cos = c.params.max_slope_degrees.to_radians().cos();
+    space
+        .highest_steep_touch(c.segment(feet), c.params.radius, HELD_TOUCH, cos)
+        .map(|z| z - feet[2])
+}
+
 /// The walker held against a blocking shape (`--play-held-cue`, a viewer
 /// aid that claims nothing about the game): a direction key held, a tick
 /// blocked, and the feet no further than [`HELD_PROGRESS`] across from
@@ -413,8 +437,9 @@ pub struct Log {
     pub held_doors: Vec<(f64, FormKey, bool, HeldWhy)>,
     /// With [`Options::report_walls`]: each stretch of blocked ticks
     /// against the same source, (first second, last second, ticks, what
-    /// blocked: [`Live::describe_source`]).
-    pub walls: Vec<(f64, f64, u64, String)>,
+    /// blocked: [`Live::describe_source`], the highest the shapes holding
+    /// the walker reached above its feet in the stretch: [`held_top`]).
+    pub walls: Vec<(f64, f64, u64, String, Option<f64>)>,
     /// With [`Options::report_platforms`]: each change of a named
     /// platform's state under the walker, (second, reference, what:
     /// [`platform_state`]).
@@ -2115,12 +2140,12 @@ impl Walker {
             s.wall = None;
             self.log.borrow_mut().land_edge += 1;
         }
+        let top = if s.blocked && (self.opts.held_cue || self.opts.report_walls) {
+            held_top(self.live.space(), c, s.feet)
+        } else {
+            None
+        };
         if self.opts.held_cue {
-            let top = s
-                .wall
-                .filter(|_| s.blocked)
-                .and_then(|w| self.live.space().entry_bounds(w.entry))
-                .map(|b| b.max[2] - s.feet[2]);
             self.held = next_held(self.held, to, keys, s.blocked, s.feet, top, edge);
         }
         {
@@ -2154,8 +2179,12 @@ impl Walker {
                     Some(l) if l.3 == what && to - l.1 <= 3.0 * tick + 1e-9 => {
                         l.1 = to;
                         l.2 += 1;
+                        l.4 = match (l.4, top) {
+                            (Some(a), Some(b)) => Some(a.max(b)),
+                            (a, b) => a.or(b),
+                        };
                     }
-                    _ => log.walls.push((to, to, 1, what)),
+                    _ => log.walls.push((to, to, 1, what, top)),
                 }
             }
         }
@@ -3582,6 +3611,85 @@ mod tests {
         assert!(off_land(&land, [4095.0, 0.0, 0.0], [4097.0, 0.0, 0.0]));
         assert!(!off_land(&land, [4000.0, 0.0, 0.0], [4090.0, 0.0, 0.0]));
         assert!(!off_land(&land, [4097.0, 0.0, 0.0], [4200.0, 0.0, 0.0]));
+    }
+
+    /// The 32nd sessions: `blocked - low obstacle` against a barricade's
+    /// post and rail. The hold's height was the box top of the one
+    /// primitive the tick met last: here a board 30 units high standing
+    /// half a unit proud of a 300-unit wall. It is now how high the shapes
+    /// touching the walker reach, the wall's part beside the board counted:
+    /// the top of the capsule's core. Against the board alone it stays the
+    /// board's top.
+    #[test]
+    fn the_hold_reads_how_high_the_touching_shapes_reach() {
+        let b = Budget::new(1 << 24);
+        let world = |wall: bool| {
+            let mut w = World::new();
+            w.add_triangles(
+                &[
+                    [
+                        [-500.0, -500.0, 0.0],
+                        [500.0, -500.0, 0.0],
+                        [500.0, 500.0, 0.0],
+                    ],
+                    [
+                        [-500.0, -500.0, 0.0],
+                        [500.0, 500.0, 0.0],
+                        [-500.0, 500.0, 0.0],
+                    ],
+                ],
+                "ground",
+                &b,
+            )
+            .unwrap();
+            let face = |x: f64, z0: f64, z1: f64| {
+                [
+                    [[x, -500.0, z0], [x, 500.0, z0], [x, 500.0, z1]],
+                    [[x, -500.0, z0], [x, 500.0, z1], [x, -500.0, z1]],
+                ]
+            };
+            w.add_triangles(&face(100.0, 0.0, 30.0), "board", &b)
+                .unwrap();
+            if wall {
+                w.add_triangles(&face(100.5, 30.0, 300.0), "wall", &b)
+                    .unwrap();
+            }
+            w.rebuild(256.0, &b).unwrap();
+            w
+        };
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [0.0, 0.0, 5.0],
+            facing: None,
+        };
+        let text = "0 face 0\n0.5 forward on\n3 forward off\n4 end\n";
+        let top = |wall: bool| {
+            let opts = Options {
+                held_cue: true,
+                ..Options::default()
+            };
+            let mut w =
+                Walker::new(world(wall), vec![None], Script::parse(text).unwrap(), opts).unwrap();
+            let mut tops = Vec::new();
+            let mut now = 0.0;
+            loop {
+                match w.step(now, Some(&start)).unwrap() {
+                    Next::Slice(s) => {
+                        now = s.until;
+                        tops.extend(w.held().and_then(|h| h.top));
+                    }
+                    Next::Finish => break,
+                    Next::Stop => panic!("stopped"),
+                }
+            }
+            tops.into_iter().fold(f64::MIN, f64::max)
+        };
+        let p = Params::PROVISIONAL;
+        let walled = top(true);
+        assert!((walled - (p.height - p.radius)).abs() < 1e-6, "{walled}");
+        let board = top(false);
+        assert!(board > 28.0 && board <= 30.0 + 1e-6, "{board}");
     }
 
     /// The hold the window's status line reads: it begins at a blocked

@@ -85,10 +85,14 @@ pub fn walker(l: &Log, report: &mut String) {
             crate::rules::HELD_DOORS
         );
     }
-    for (from, to, n, what) in &l.walls {
+    for (from, to, n, what, top) in &l.walls {
+        let reach = top.map_or_else(
+            || "no steep shape touching".to_string(),
+            |t| format!("the shapes holding it reach {t:.1} above the feet"),
+        );
         let _ = writeln!(
             report,
-            "wall: blocked from {from} to {to} s ({n} ticks) against {what} (--play-report-walls)"
+            "wall: blocked from {from} to {to} s ({n} ticks) against {what}; {reach} (--play-report-walls)"
         );
     }
     if !l.light_passed.is_empty() {

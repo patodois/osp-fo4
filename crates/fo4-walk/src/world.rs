@@ -125,6 +125,11 @@ pub struct Contact {
     pub normal: V3,
 }
 
+/// Most units between two samples along a capsule's core that
+/// [`World::highest_steep_touch`] takes (bottom and top included): a shape's
+/// top is found to within about this.
+pub const TOUCH_STEP: f64 = 2.0;
+
 fn grow<T>(v: &mut Vec<T>, n: usize, b: &Budget) -> Result<()> {
     b.reserve(v, n, FILE, 0)
 }
@@ -691,6 +696,56 @@ impl World {
                 normal,
             });
         }
+    }
+
+    /// The highest point at which a primitive too steep to stand on
+    /// touches the capsule `segment` widened by `radius + margin`, among
+    /// the primitives whose source `keep` keeps: the core is sampled from
+    /// bottom to top at most [`TOUCH_STEP`] apart, each sample a sphere of
+    /// that radius; where a primitive reaches a sample, the point of the
+    /// primitive's surface nearest to it counts when the direction from
+    /// that point to the sample is steeper than `walkable_cos` (its z below
+    /// it). Unlike one closest pair of the whole capsule, which for a wall
+    /// beside the capsule's core is any point along it, this finds how high
+    /// the shapes that hold a character reach.
+    pub fn highest_steep_touch(
+        &self,
+        segment: [V3; 2],
+        radius: f64,
+        margin: f64,
+        walkable_cos: f64,
+        keep: &dyn Fn(u32) -> bool,
+        scratch: &mut Vec<u32>,
+    ) -> Option<f64> {
+        let q = Aabb::of(&segment, radius + margin)?;
+        self.candidates(&q, scratch);
+        let span = g::length(g::sub(segment[1], segment[0]));
+        let samples = (span / TOUCH_STEP).ceil().clamp(1.0, 4096.0) as usize + 1;
+        let mut best: Option<f64> = None;
+        for i in scratch.iter() {
+            let e = &self.entries[*i as usize];
+            if !keep(e.source) {
+                continue;
+            }
+            let (core, r) = self.core(&e.prim);
+            for k in 0..samples {
+                let f = k as f64 / (samples - 1) as f64;
+                let p = g::add(segment[0], g::scale(g::sub(segment[1], segment[0]), f));
+                let c = g::closest(&[p], core.points());
+                if c.distance >= radius + r + margin || c.distance <= 1e-9 {
+                    continue;
+                }
+                let n = g::scale(g::sub(p, c.on_b), 1.0 / c.distance);
+                if n[2] >= walkable_cos {
+                    continue;
+                }
+                let z = c.on_b[2] + n[2] * r;
+                if best.is_none_or(|b| z > b) {
+                    best = Some(z);
+                }
+            }
+        }
+        best
     }
 
     /// Normal for a capsule whose core touches the primitive's core: the

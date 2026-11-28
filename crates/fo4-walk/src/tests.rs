@@ -1453,3 +1453,66 @@ fn an_entry_numbered_across_the_set_gives_its_box() {
     let tops: Vec<f64> = boxes.iter().map(|(_, bx)| bx.max[2]).collect();
     assert!(tops.iter().any(|t| (t - 40.0).abs() < 1e-9));
 }
+
+/// How high the shapes holding a character reach (the play window's held
+/// cue, round 34): a wall of stacked mesh strips taller than the capsule
+/// reaches the top of its core, however low the strip the tick met last; a
+/// curb above the step height reaches its own top, within a sample's step;
+/// the floor under the feet never counts, and nothing touches in the open.
+#[test]
+fn the_highest_steep_touch_is_how_high_the_holding_shapes_reach() {
+    let b = budget();
+    let cos = P.max_slope_degrees.to_radians().cos();
+    let top = |c: &Character, w: &World| {
+        w.highest_steep_touch(
+            c.segment(c.feet),
+            P.radius,
+            1.0,
+            cos,
+            &|_| true,
+            &mut Vec::new(),
+        )
+        .map(|z| z - c.feet[2])
+    };
+    // A wall of thirty-unit strips, one entry each, 300 units high.
+    let mut w = World::new();
+    floor(&mut w, &b);
+    let strips: Vec<[V3; 3]> = (0..10)
+        .flat_map(|k| {
+            let (z0, z1) = (30.0 * f64::from(k), 30.0 * f64::from(k + 1));
+            quad(
+                [100.0, -500.0, z0],
+                [100.0, 500.0, z0],
+                [100.0, 500.0, z1],
+                [100.0, -500.0, z1],
+            )
+        })
+        .collect();
+    w.add_triangles(&strips, "wall", &b).unwrap();
+    let mut c = character([0.0, 0.0, 0.0]);
+    c.settle(&w, 600);
+    assert_eq!(top(&c, &w), None);
+    let states = run(&mut c, &w, ahead(0.0), 120);
+    assert!(states.last().is_some_and(|s| s.blocked));
+    let t = top(&c, &w).unwrap();
+    // A wall beside the core touches its top sample's sphere at that
+    // sample's height: the top of the core.
+    assert!(near(t, P.height - P.radius, 1e-6), "{t}");
+    // A curb 10 units above the step height: held, and reaching its top.
+    let h = P.step_height + 10.0;
+    let mut w = World::new();
+    floor(&mut w, &b);
+    w.add_hull(
+        &cuboid([100.0, -500.0, 0.0], [160.0, 500.0, h]),
+        0.0,
+        "curb",
+        &b,
+    )
+    .unwrap();
+    let mut c = character([0.0, 0.0, 0.0]);
+    c.settle(&w, 600);
+    let states = run(&mut c, &w, ahead(0.0), 120);
+    assert!(states.last().is_some_and(|s| s.blocked));
+    let t = top(&c, &w).unwrap();
+    assert!(t <= h + 1e-6 && t > h - crate::world::TOUCH_STEP, "{t} {h}");
+}

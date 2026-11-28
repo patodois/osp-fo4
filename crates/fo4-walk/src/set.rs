@@ -230,6 +230,32 @@ impl<K: Ord> WorldSet<K> {
             .map(|e| e.bounds)
     }
 
+    /// [`World::highest_steep_touch`] over every world of the set, the
+    /// hidden sources left out.
+    pub fn highest_steep_touch(
+        &self,
+        segment: [V3; 2],
+        radius: f64,
+        margin: f64,
+        walkable_cos: f64,
+    ) -> Option<f64> {
+        let q = Aabb::of(&segment, radius + margin)?;
+        let mut scratch = Vec::new();
+        let mut best: Option<f64> = None;
+        for ((_, w), hidden) in self.pieces.iter().zip(&self.hidden) {
+            if !w.bounds.is_some_and(|b| b.overlaps(&q)) {
+                continue;
+            }
+            let keep = |s: u32| !hidden.get(s as usize).copied().unwrap_or(false);
+            let z =
+                w.highest_steep_touch(segment, radius, margin, walkable_cos, &keep, &mut scratch);
+            if let Some(z) = z.filter(|z| best.is_none_or(|b| *z > b)) {
+                best = Some(z);
+            }
+        }
+        best
+    }
+
     /// The highest surface at or below `z_from` on the vertical line
     /// through `(x, y)` in any world ([`World::ray_down`]), with its entry
     /// and source numbered across the set.
