@@ -143,6 +143,10 @@ pub struct Play {
     /// part carrying it, whether that part moves, when it starts and stops,
     /// in `play.txt`).
     pub report_platforms: bool,
+    /// `--play-held-cue` (a viewer aid, no rule): the walker keeps its hold
+    /// against a blocking shape for the window's status line
+    /// ([`walker::Held`]).
+    pub held_cue: bool,
     /// `--play-action-after-offset` (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
     /// the run's `--action-after-offset`, and each timed open or
@@ -232,6 +236,7 @@ impl Play {
             "--play-pick-actors" => &mut self.pick_actors,
             "--play-report-walls" => &mut self.report_walls,
             "--play-report-platforms" => &mut self.report_platforms,
+            "--play-held-cue" => &mut self.held_cue,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
@@ -604,6 +609,7 @@ impl Play {
         opts.pick_actors = self.pick_actors;
         opts.report_walls = self.report_walls;
         opts.report_platforms = self.report_platforms;
+        opts.held_cue = self.held_cue;
         opts
     }
 
@@ -888,6 +894,8 @@ mod tests {
         .unwrap();
         assert!(p.held_doors && p.held_at_load && p.report_walls);
         assert!(p.walker_options().report_platforms);
+        let h = read("--play-held-cue").unwrap();
+        assert!(h.held_cue && h.walker_options().held_cue);
         assert!(p.world_options().held_at_load && p.walker_options().held_at_load);
         assert!(p.walker_options().report_walls);
         assert!(!p.world_options().door_open && !p.walker_options().door_open);

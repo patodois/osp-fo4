@@ -216,6 +216,20 @@ impl<K: Ord> WorldSet<K> {
             .map(|s| (key, s))
     }
 
+    /// The box of entry `entry` as numbered across the set (as
+    /// [`Space::contacts`] and a contact's [`crate::controller::Ground`]
+    /// number it).
+    pub fn entry_bounds(&self, entry: u32) -> Option<Aabb> {
+        let k = self
+            .bases
+            .partition_point(|b| b.0 <= entry)
+            .checked_sub(1)?;
+        let (_, w) = &self.pieces[k];
+        w.entries
+            .get((entry - self.bases[k].0) as usize)
+            .map(|e| e.bounds)
+    }
+
     /// The highest surface at or below `z_from` on the vertical line
     /// through `(x, y)` in any world ([`World::ray_down`]), with its entry
     /// and source numbered across the set.

@@ -1575,6 +1575,10 @@ pub fn cell<'s>(
                     limits,
                     &refs,
                     placement,
+                    // The window's own walking world: the play run's
+                    // walker builds its own, where --play-light-movables
+                    // applies.
+                    false,
                     &mut counts,
                     &budget,
                 )?;

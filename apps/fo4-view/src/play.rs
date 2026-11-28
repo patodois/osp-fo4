@@ -1452,6 +1452,9 @@ mod enabled {
         /// The named platforms' moving parts where the walker's collision
         /// stands (`fo4_play::walker::Walker::platforms`).
         pub platforms: Vec<fo4_play::elevator::Platform>,
+        /// With `--play-held-cue`: the walker's hold against a blocking
+        /// shape (`fo4_play::walker::Held`; the status line's held cue).
+        pub held: Option<fo4_play::walker::Held>,
         /// The held doors the walker's walking worlds have held so far,
         /// each with whether its box stands now
         /// (`fo4_play::walker::Walker::held_door_states`).
@@ -2194,6 +2197,7 @@ mod enabled {
 
         fn publish(&mut self, n: &Next) {
             let platforms = self.walker.platforms();
+            let held = self.walker.held();
             let doors = self.walker.held_door_states();
             let boxes = self.walker.marker_box_states();
             let log = self.log.borrow();
@@ -2201,6 +2205,7 @@ mod enabled {
                 return;
             };
             s.platforms = platforms;
+            s.held = held;
             s.doors = doors;
             s.boxes = boxes;
             // The ground under the actors the window asks about
@@ -2942,6 +2947,14 @@ mod enabled {
         fn platforms(&mut self, platforms: Vec<fo4_play::elevator::Platform>) {
             if let Ok(mut s) = self.seen.lock() {
                 s.platforms = platforms;
+            }
+        }
+
+        /// The walker's hold at the tick the feet stand at
+        /// (`--play-held-cue`).
+        fn held(&mut self, held: Option<fo4_play::walker::Held>) {
+            if let Ok(mut s) = self.seen.lock() {
+                s.held = held;
             }
         }
     }

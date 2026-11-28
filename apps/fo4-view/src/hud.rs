@@ -319,6 +319,32 @@ pub fn platform_status(
     }
 }
 
+/// How long (seconds) the walker must be held against a blocking shape
+/// before the status line says so. Viewer policy.
+pub const HELD_SECONDS: f64 = 1.0;
+/// The height above the feet (units) at or below which the top of what
+/// holds the walker is a "low obstacle": two fifths of the 120-unit eye
+/// height, about knee height. Viewer policy, nothing about the game.
+pub const HELD_LOW: f64 = 48.0;
+
+/// The status line's held cue (`--play-held-cue`, a viewer aid that
+/// claims nothing about the game): `held`, the second the walker's hold
+/// against a blocking shape began and how far the top of the primitive it
+/// last met stands above its feet (`fo4_play::walker::Held::since` and
+/// `top`). After [`HELD_SECONDS`] without progress, "blocked - low
+/// obstacle" when the top of
+/// the primitive it last met stands at most [`HELD_LOW`] above its feet,
+/// "blocked" otherwise (or when the top is not known); `None` before. No
+/// object is named: the cue says why the walker stands when the cause may
+/// lie below the eye's frame.
+pub fn held_status(held: Option<(f64, Option<f64>)>, t: f64) -> Option<String> {
+    let (_, top) = held.filter(|h| t - h.0 >= HELD_SECONDS)?;
+    Some(match top {
+        Some(top) if top <= HELD_LOW => "blocked - low obstacle".to_string(),
+        _ => "blocked".to_string(),
+    })
+}
+
 impl Shown {
     /// The text of a one-line slot (`None`: the slot is hidden; a subtitle
     /// as its lines joined). `columns`: the characters a line may hold.
@@ -473,6 +499,33 @@ mod tests {
             carried_starts: starts,
             carried_until: until,
         }
+    }
+
+    /// The 30th sessions: the walker stood against shapes below the eye's
+    /// frame (a rail at the shin, a tipped panel, a bank). A synthetic hold:
+    /// nothing for the first second, then "blocked", with "low obstacle"
+    /// when what holds it is no higher than the knee.
+    #[test]
+    fn a_walker_held_a_second_says_blocked_and_whether_low() {
+        let held = |top: Option<f64>| (10.0, top);
+        assert_eq!(held_status(None, 20.0), None);
+        assert_eq!(held_status(Some(held(Some(24.0))), 10.5), None);
+        assert_eq!(
+            held_status(Some(held(Some(24.0))), 11.0).as_deref(),
+            Some("blocked - low obstacle")
+        );
+        assert_eq!(
+            held_status(Some(held(Some(72.0))), 11.2).as_deref(),
+            Some("blocked")
+        );
+        assert_eq!(
+            held_status(Some(held(None)), 11.2).as_deref(),
+            Some("blocked")
+        );
+        assert_eq!(
+            held_status(Some(held(Some(HELD_LOW))), 12.0).as_deref(),
+            Some("blocked - low obstacle")
+        );
     }
 
     #[test]

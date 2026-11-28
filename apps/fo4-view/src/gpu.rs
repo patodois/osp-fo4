@@ -2102,6 +2102,9 @@ fn hud_update(
         None => (None, None),
     };
     *platform_end = kept;
+    // The held cue when no platform speaks (`--play-held-cue`, viewer aid).
+    let platform =
+        platform.or_else(|| crate::hud::held_status(seen.held.map(|h| (h.since, h.top)), seen.t));
     let shown = crate::hud::Shown {
         prompt: seen.prompt.clone().filter(|_| seen.aim_usable),
         confirm,
@@ -2145,6 +2148,13 @@ fn hud_update(
                 .platform
                 .as_deref()
                 .is_some_and(|t| t.starts_with("platform moving")),
+        ),
+        (
+            "the walker held against a shape",
+            shown
+                .platform
+                .as_deref()
+                .is_some_and(|t| t.starts_with("blocked")),
         ),
         (
             "a platform under the walker about to start",

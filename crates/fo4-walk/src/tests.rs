@@ -1430,3 +1430,26 @@ fn a_huge_finite_extent_grows_the_grid_cell_instead_of_overflowing() {
     w.add_sphere([1e30, 1e30, 0.0], 1.0, "far", &b).unwrap();
     assert!(w.add_sphere([2.0, 0.0, 0.0], 1.0, "next", &b).is_ok());
 }
+
+/// An entry numbered across the set gives its own world's box (the window's
+/// held cue reads the top of what blocked the walker).
+#[test]
+fn an_entry_numbered_across_the_set_gives_its_box() {
+    let b = budget();
+    let set = two_floors(&b);
+    let mut boxes = Vec::new();
+    for (_, w, (entry0, _)) in set.pieces() {
+        for (i, e) in w.entries.iter().enumerate() {
+            boxes.push((entry0 + i as u32, e.bounds));
+        }
+    }
+    assert!(boxes.len() >= 4);
+    for (n, bx) in &boxes {
+        assert_eq!(set.entry_bounds(*n), Some(*bx));
+    }
+    let past = boxes.iter().map(|(n, _)| *n).max().unwrap() + 1;
+    assert_eq!(set.entry_bounds(past), None);
+    // The ball of the second floor stands 40 units above its floor.
+    let tops: Vec<f64> = boxes.iter().map(|(_, bx)| bx.max[2]).collect();
+    assert!(tops.iter().any(|t| (t - 40.0).abs() < 1e-9));
+}

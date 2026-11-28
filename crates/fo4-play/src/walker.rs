@@ -219,6 +219,9 @@ pub struct Options {
     /// Record each change of what the named platforms' parts do under the
     /// walker ([`Log::platforms`]; `--play-report-platforms`, a report only).
     pub report_platforms: bool,
+    /// Keep the walker's hold against a blocking shape ([`Held`],
+    /// [`Walker::held`]; `--play-held-cue`, a viewer aid).
+    pub held_cue: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -246,6 +249,7 @@ impl Default for Options {
             pick_actors: false,
             report_walls: false,
             report_platforms: false,
+            held_cue: false,
         }
     }
 }
@@ -273,6 +277,61 @@ pub trait Arrivals {
     /// the moving parts and their riders at the tick the feet stand at,
     /// not at the last slice's end). Nothing by default; reads only.
     fn platforms(&mut self, _platforms: Vec<crate::elevator::Platform>) {}
+
+    /// With `--play-held-cue`: the walker's hold ([`Held`]) at the second
+    /// [`Arrivals::wait`] gives next, before each wait. Nothing by default.
+    fn held(&mut self, _held: Option<Held>) {}
+}
+
+/// How far (units, across) the walker's feet must get from where a hold
+/// began for the hold to end ([`next_held`]; viewer aid, no rule).
+pub const HELD_PROGRESS: f64 = 8.0;
+
+/// The walker held against a blocking shape (`--play-held-cue`, a viewer
+/// aid that claims nothing about the game): a direction key held, a tick
+/// blocked, and the feet no further than [`HELD_PROGRESS`] across from
+/// where it began since.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Held {
+    /// The second the hold began.
+    pub since: f64,
+    /// The feet where it began.
+    pub at: [f64; 3],
+    /// How far the top of the box of the primitive the walker last met
+    /// while blocked stands above the feet (units); `None` when not known.
+    pub top: Option<f64>,
+}
+
+/// The hold after one tick ([`Held`]): `keys`, whether a direction key is
+/// held; `blocked`, whether the tick was blocked; `feet`, where the tick
+/// left the feet; `top`, the met primitive's top above the feet when
+/// blocked. No key ends a hold; feet further than [`HELD_PROGRESS`] across
+/// from its start end it (a blocked tick then starts another); otherwise a
+/// hold goes on through ticks that are not blocked (a wedged walker's
+/// step-up tries).
+pub fn next_held(
+    prev: Option<Held>,
+    t: f64,
+    keys: bool,
+    blocked: bool,
+    feet: [f64; 3],
+    top: Option<f64>,
+) -> Option<Held> {
+    if !keys {
+        return None;
+    }
+    let across = |a: [f64; 3]| (a[0] - feet[0]).hypot(a[1] - feet[1]);
+    match prev {
+        Some(h) if across(h.at) <= HELD_PROGRESS => Some(Held {
+            top: if blocked { top.or(h.top) } else { h.top },
+            ..h
+        }),
+        _ => blocked.then_some(Held {
+            since: t,
+            at: feet,
+            top,
+        }),
+    }
 }
 
 /// Why the walker stopped when its commands' source closed.
@@ -711,6 +770,8 @@ pub struct Walker {
     /// `--play-report-platforms`: each named platform's state the log last
     /// gave ([`platform_state`]).
     platforms_logged: Vec<String>,
+    /// `--play-held-cue`: the walker's hold now ([`Held`]).
+    held: Option<Held>,
     /// The doors the person's activation opened since the log last read
     /// the boxes (`--play-door-toggle`).
     toggled_open: std::collections::BTreeSet<FormKey>,
@@ -833,6 +894,7 @@ impl Walker {
             state: RunState::reading_doors(opts.held_doors),
             held_logged: Default::default(),
             platforms_logged: Vec::new(),
+            held: None,
             toggled_open: Default::default(),
             nowait: false,
             doors: None,
@@ -1033,9 +1095,14 @@ impl Walker {
         while self.known < until {
             let feet = self.character.as_ref().map(|c| c.feet);
             let platforms = (!self.elevators.is_empty()).then(|| self.platforms());
+            let held = self.held;
+            let held_cue = self.opts.held_cue;
             let source = self.arrivals.as_mut().ok_or("PlayNoSource")?;
             if let Some(p) = platforms {
                 source.platforms(p);
+            }
+            if held_cue {
+                source.held(held);
             }
             let (events, horizon) = source
                 .wait(until, self.t, feet)
@@ -1514,6 +1581,12 @@ impl Walker {
         self.live.marker_boxes()
     }
 
+    /// With `--play-held-cue`: the walker's hold against a blocking shape
+    /// now ([`Held`]); `None` without the switch.
+    pub fn held(&self) -> Option<Held> {
+        self.held
+    }
+
     /// The named platforms' moving parts where their collision stands
     /// (`--play-elevator`; empty before the first slice builds them), for a
     /// window to draw them there: per named reference, its model, the
@@ -1967,6 +2040,7 @@ impl Walker {
                 until = until.min(self.t + s);
             }
             self.t = until;
+            self.held = None;
             actions.extend(self.commands()?);
             self.report_platforms();
             let mut log = self.log.borrow_mut();
@@ -1991,6 +2065,14 @@ impl Walker {
         let s = c.tick(self.live.space(), self.controls.walker());
         let took = started.elapsed().as_secs_f64();
         c.settings.tick = tick;
+        if self.opts.held_cue {
+            let top = s
+                .wall
+                .filter(|_| s.blocked)
+                .and_then(|w| self.live.space().entry_bounds(w.entry))
+                .map(|b| b.max[2] - s.feet[2]);
+            self.held = next_held(self.held, to, keys, s.blocked, s.feet, top);
+        }
         {
             let mut log = self.log.borrow_mut();
             log.tick_seconds += took;
@@ -3292,5 +3374,29 @@ mod tests {
     fn an_activation_needs_the_callers_reach() {
         let script = Script::parse("1 activate\n").unwrap();
         assert!(Walker::new(floor(), vec![], script, Options::default()).is_err());
+    }
+    /// The hold the window's status line reads: it begins at a blocked
+    /// tick, goes on while the feet stay put (blocked or not), ends with
+    /// progress or with the keys let go.
+    #[test]
+    fn a_hold_begins_blocked_and_ends_with_progress_or_no_key() {
+        let f = |x: f64| [x, 0.0, 0.0];
+        assert_eq!(next_held(None, 1.0, true, false, f(0.0), None), None);
+        let h = next_held(None, 1.0, true, true, f(0.0), Some(30.0)).unwrap();
+        assert_eq!((h.since, h.top), (1.0, Some(30.0)));
+        // Wedged: unblocked step-up tries and a few units of jitter keep it.
+        let h2 = next_held(Some(h), 1.5, true, false, f(3.0), None).unwrap();
+        assert_eq!((h2.since, h2.top), (1.0, Some(30.0)));
+        let h3 = next_held(Some(h2), 2.0, true, true, f(-2.0), Some(70.0)).unwrap();
+        assert_eq!((h3.since, h3.top), (1.0, Some(70.0)));
+        // Progress ends it; blocked again further on starts another.
+        assert_eq!(
+            next_held(Some(h3), 2.1, true, false, f(HELD_PROGRESS + 1.0), None),
+            None
+        );
+        let h4 = next_held(Some(h3), 2.1, true, true, f(20.0), None).unwrap();
+        assert_eq!(h4.since, 2.1);
+        // No key: no hold.
+        assert_eq!(next_held(Some(h3), 2.2, false, true, f(0.0), None), None);
     }
 }

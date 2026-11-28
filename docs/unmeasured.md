@@ -122,7 +122,9 @@ times the rule's placeholder), a choice for playing, not a measurement.
 
 The preset's other switches belong to no rule of their own: they choose what the window loads and how the play
 mode runs (viewer or play-mode policy, the caller's values): `--walk`, `--terrain`, `--around`, `--no-stream`,
-`--play-keys`, `--play-stand`, `--play-reach`, `--play-follow-grid`, `--play-slice`, and `--timeline-cast` (the
+`--play-keys`, `--play-stand`, `--play-reach`, `--play-follow-grid`, `--play-slice`, `--play-held-cue` (the status
+line's "blocked" after a second held against a shape, "low obstacle" when its top is at most 48 units above the
+feet: a viewer aid), and `--timeline-cast` (the
 run's actors drawn as their characters; how they stand and move is the rules of the `--timeline-*` and
 `--actor-*` rows and of the hypotheses level).
 
