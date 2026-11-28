@@ -315,11 +315,18 @@ pub fn last_change(track: &[(f64, Motion)]) -> Option<f64> {
 /// policy, for the cue only: the rides and the rules read every change).
 pub const CUE_STILL: f64 = 0.05;
 
+/// Two stretches of visible motion less than this apart (seconds) are read
+/// by the cue as one: a part that sets off or settles slowly passes
+/// [`CUE_STILL`] a few keys apart, and the cue would flicker between
+/// moving and standing (viewer policy).
+pub const CUE_JOIN: f64 = 1.0;
+
 /// The stretches of a track over which what it moves goes visibly
 /// ([`CUE_STILL`]): `dist` gives how far two keys' poses are apart. A
 /// stretch starts at the last key still within half of [`CUE_STILL`] of
 /// the pose it left and ends at the first key more than [`CUE_STILL`] from
-/// it; stretches that touch are joined. (start, end) seconds, increasing.
+/// it; stretches less than [`CUE_JOIN`] apart are joined. (start, end)
+/// seconds, increasing.
 fn visible_spans<M>(track: &[(f64, M)], dist: impl Fn(&M, &M) -> f64) -> Vec<(f64, f64)> {
     let mut out: Vec<(f64, f64)> = Vec::new();
     let (mut anchor, mut near) = (0usize, 0usize);
@@ -331,7 +338,7 @@ fn visible_spans<M>(track: &[(f64, M)], dist: impl Fn(&M, &M) -> f64) -> Vec<(f6
         if d > CUE_STILL {
             let (s, e) = (track[near].0, track[k].0);
             match out.last_mut() {
-                Some(l) if l.1 >= s => l.1 = e,
+                Some(l) if s - l.1 < CUE_JOIN => l.1 = e,
                 _ => out.push((s, e)),
             }
             anchor = k;
@@ -2306,6 +2313,17 @@ mod tests {
         let (moving, starts, _) = motion_cue_at(&track, bounds, 2.5);
         assert!(moving && starts.is_none());
         assert_eq!(motion_cue_at(&track, bounds, 3.5), (false, None, None));
+        // A slow start passes the limit a few keys apart: one stretch.
+        let slow: MotionTrack = (0..=120)
+            .map(|k| {
+                let f = k as f64 / 60.0;
+                (f, m(0.5 * f * f))
+            })
+            .collect();
+        let spans = visible_spans(&slow, |a: &Motion, b: &Motion| {
+            (a.apply([0.0; 3])[2] - b.apply([0.0; 3])[2]).abs()
+        });
+        assert_eq!(spans.len(), 1, "{spans:?}");
         // The strict reading takes the noise for motion.
         assert!(last_change(&track[..120]).is_some());
         assert_eq!(
