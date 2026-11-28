@@ -478,6 +478,21 @@ own refusals (collision build, persistent join: a reference's data limit is that
 vault table is not seen; the containers' fields (drawing and collision together); a memo of parsed collision models
 for the dream's hold; the player's pod drawn open.
 
+Thirty-second-round fixes (the thirtieth sessions): the platform cue reads a part's visible motion (a held pose's
+keys repeat with noise) and speaks only of the part carrying the walker: moving, starting in N s, ready, else
+nothing (`Platform::carried_moving`, `carried_starts`, `carried_until`; `play_run --play-report-platforms` logs it).
+The title names the eye the frame draws from (it lagged a frame at the cut onto the rising surface deck). A movable
+static at most 64 units along each axis has no collision under `--play-light-movables`
+(`play_light_movable_static_passed_v1`, in the preset; the limit stands in for a mass this project does not read):
+the walker passes the cone on the line to the lift's apron and the one by the barricade's rail; the crate beside the
+first still stops it. `--play-held-cue` (in the preset, a viewer aid) says `blocked` (`- low obstacle` under 48
+units) after a second held against a shape. Measured, not changed: the dream's and the first bridge's holds are
+mostly the walking world's scene load (4.6 of 7.4 s, 8.0 of 9.2 s headless), not its collision models. Next: a
+loader kept across walking world builds (the grid squares a build shares with the one before), the containers'
+fields, the water planes, the player's pod drawn open, the town's creatures and the far road, the route from the
+lift's apron over the bridges to the waterline and back to the house street (replayed past the 30th session's
+end).
+
 Thirty-first-round fixes (the twenty-ninth sessions): the new stops on clear ground are not round 30's step
 look-ahead: the same record replayed with `--play-step-lookahead` off stops at the same three places within a unit,
 each a drawn shape below the eye's frame (a 45-unit movable static wedging the walker against a barrier's rail or a

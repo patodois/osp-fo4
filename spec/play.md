@@ -2468,6 +2468,45 @@ tail of keys stands), and `Platform::carried_until` the same for the part carryi
 counts down to the carrying part's own end while one carries the walker, so a settled deck says nothing while the
 rest of its sequence (the lower grille's column) still moves.
 
+**Round 32.** *The platform cue.* A sequence that holds a deck's pose repeats its keys with about a thousandth of a
+unit of noise; read key by key that is motion, and the cue counted down on the surface lift's upper deck while it
+stood (the 30th sessions). The cue now reads a part's visible motion (`fo4_play::elevator::CUE_STILL`, 0.05 units of
+any corner of the part's box from where it stood; stretches of motion less than `CUE_JOIN`, 1 s, apart are one;
+viewer policy, the rides and every rule keep reading every change) and speaks only of the part carrying the walker:
+`platform moving - ready in N s` while that part moves (`Platform::carried_moving`, to `Platform::carried_until`),
+`platform starts in N s` while it stands with a later start in a sequence the run has started
+(`Platform::carried_starts`), `platform ready` for 4 s after, nothing when no part carries the walker (a platform the
+person's activation set moving beside the walker, such as the exit ramp seen from the fixed floor, says nothing).
+After the load door onto the rising surface deck the count is the deck's own rise, which moves from its sequence's
+first key. `play_run --play-report-platforms` (a report, no behaviour) logs each change of a named platform's state
+under the walker.
+
+*The title at a cut.* The readout is built before the play mode sets the camera from the walker's feet of the frame;
+at the cut onto the rising deck the title named the eye of the frame before (the walker standing at the door's
+place on the hatch during the load) over a picture of the shaft. The play mode now writes the eye it sets the camera
+to into the readout of the same frame.
+
+*Small movable statics.* What the data stores for the movable static that held the walker on the line to the lift's
+apron: its base record is a movable static (MSTT), its object bounds about 43 by 43 by 45 units, its model's
+collision one physics system whose body links a dynamic compound shape of eight convex hulls, each with a mass
+properties object, and whose system stores one element in the arrays at +32 and +48 that the static crate's system beside it
+leaves empty (spec/havok-bodies.md); the layout of those objects, and so a mass, a motion type or a layer, is not
+read. `play_run --play-light-movables` (`play_light_movable_static_passed_v1`, pending, in the preset;
+`fo4_play::world::light_movable`, `leave_out_references`): a movable static whose bounds times its scale are at most
+64 units along each axis (`LIGHT_MOVABLE_MAX`, the assumption in place of a mass) has no collision in the walking
+world or its dormant piece; the drawing keeps it; nothing is pushed. Statics and larger movable statics keep
+blocking: the crate beside it still stops the walker.
+
+*Held below the frame.* `--play-held-cue` (a viewer aid, no rule): the walker keeps its hold
+(`fo4_play::walker::Held`, `next_held`: a blocked tick with a direction key held, the feet within 8 units across
+since) and the window's status line says `blocked` after a second, `blocked - low obstacle` when the top of the
+primitive met last stands at most 48 units above the feet (`fo4_walk::WorldSet::entry_bounds`). It names nothing.
+
+*Where a hold's time goes.* Built headless in a fresh process, the dream's walking world takes 7.4 s: 4.6 s loading
+the cell's scene, 0.5 s reading its collision, 1.7 s for the markers and doors, 0.5 s for the dormant piece; a grid
+square by the first bridge 9.2 s, 8.0 s of it loading the nine cells' scene. A memo of parsed collision models
+would cut little; each walking world builds its scene with a new loader.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
