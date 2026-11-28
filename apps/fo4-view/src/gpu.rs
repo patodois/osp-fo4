@@ -1588,6 +1588,31 @@ fn readout(fly: &Fly, walk: Option<&Walk>, input: FlyInput) -> String {
     }
 }
 
+/// The readout `text` with its eye field (" | eye X, Y, Z", as
+/// [`readout`] writes it in fly mode) giving `eye` instead: the play mode
+/// moves the camera after the readout was built in the frame
+/// ([`fly_camera`] runs before [`play_scripted`]), and the title must name
+/// the eye the frame draws from (the 30th sessions: at the cut onto the
+/// rising surface deck the title read the eye of the frame before, at the
+/// load door's place, while the picture was the shaft). Text with no eye
+/// field is returned as it is.
+fn readout_with_eye(text: &str, eye: [f64; 3]) -> String {
+    const FIELD: &str = " | eye ";
+    let Some(at) = text.find(FIELD) else {
+        return text.to_string();
+    };
+    let from = at + FIELD.len();
+    let to = text[from..].find(" | ").map_or(text.len(), |k| from + k);
+    format!(
+        "{}{:.1}, {:.1}, {:.1}{}",
+        &text[..from],
+        eye[0],
+        eye[1],
+        eye[2],
+        &text[to..]
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 fn fly_camera(
     keys: Res<ButtonInput<KeyCode>>,
@@ -4043,6 +4068,8 @@ fn play_scripted(
                 t.translation = pose.0;
                 t.rotation = pose.1;
             }
+            // The title names the eye this frame draws from.
+            readout.text = readout_with_eye(&readout.text, state.eye);
         }
     }
     // Not while the old scene leaves and the new one uploads.
@@ -5261,6 +5288,52 @@ mod tests {
         assert!(
             text.starts_with("fo4-view | fly | 1500 u/s (Shift)"),
             "{text}"
+        );
+    }
+
+    /// The 30th sessions: at the cut onto the rising surface deck the
+    /// title read the eye of the frame before (the load door's place, Z
+    /// 9041.5) over a picture of the shaft (the camera already on the
+    /// deck). The play mode writes the eye it sets the camera to into the
+    /// readout of the same frame.
+    #[test]
+    fn the_title_names_the_eye_the_frame_draws_from() {
+        let fly = |eye: [f64; 3]| {
+            let state = FlyState {
+                eye,
+                yaw: 0.0,
+                pitch: 0.0,
+            };
+            Fly {
+                state,
+                settings: crate::cli::DEFAULT_FLY,
+                start: state,
+                start_walking: false,
+            }
+        };
+        let before = [-88744.7, 90515.3, 9041.5];
+        let now = [-88744.7, 90515.3, 7335.6];
+        let built = format!(
+            "{} | run 1692.5 s | stage",
+            readout(&fly(before), None, FlyInput::default())
+        );
+        let fixed = readout_with_eye(&built, now);
+        assert_eq!(
+            fixed,
+            format!(
+                "{} | run 1692.5 s | stage",
+                readout(&fly(now), None, FlyInput::default())
+            )
+        );
+        assert!(fixed.contains("eye -88744.7, 90515.3, 7335.6 | run"));
+        // The eye last in the text, and a text without one.
+        assert!(
+            readout_with_eye("fo4-view | fly | 300 u/s | eye 1.0, 2.0, 3.0", now)
+                .ends_with("eye -88744.7, 90515.3, 7335.6")
+        );
+        assert_eq!(
+            readout_with_eye("fo4-view | walk | feet", now),
+            "fo4-view | walk | feet"
         );
     }
 
