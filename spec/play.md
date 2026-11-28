@@ -2565,6 +2565,33 @@ is at most 36 units (`hud::HELD_LOW`: a knee for a figure whose eye stands at th
 usual proportions, knee 0.285 and eye 0.936 of stature; a viewer aid, nothing about the game), `blocked` otherwise.
 `--play-report-walls` adds the same height to each stretch it reports.
 
+**The barricade's rails and the road after a load.** In the 32nd's B the rails "were not drawn" after the load at
+839.6 s while something stopped the walker. The window log shows the load centred on the square east of the
+rails' square, and the rails' references (plain statics, no enable parent, not touched by the run, drawing and
+collision ready) are drawn in it and in the load before (headless frames of either load show them). From the
+person's eye at 860.8 s and 927.4 s, looking the way the record looks, the frame of that load shows what the
+person's shots show, and the rails stand beside the eye, just out of the frame (turned, the same eye sees them at
+arm's length): the walker was held by the rail's end it had walked past. Nothing was missing. The drawn and the
+walked sets come from one choice of squares, `fo4_scene::grid::around` about the walker's cell, for the window's
+load and the walker's build alike; at a change of square both take the new centre's 3 x 3. A reference stored in a
+square outside that 3 x 3 is in neither, though its shape may reach into it (a road mesh of the next square east
+is drawn and walked only while that square is loaded); that is the follow grid's radius, a play-mode policy. The
+missing road over pale ground (B, 1124.6 s) is the prewar worldspace's data: its square there holds 7 references
+(the postwar worldspace's square at the same grid holds 478) and no road, and about a tenth of its terrain's
+weight falls on a base layer that names no texture, drawn plain grey (`spec/land.md`).
+
+**The moving hold: the next square built ahead.** `--play-build-ahead` (in the preset; a play-mode policy that
+changes no outcome, no rule): while the walker stands in a square of the follow grid, within 1536 units of the
+square's nearest edge (`walker::AHEAD_LEAD`, `walker::ahead_square`) the walking world of the square beyond is
+asked of a thread of its own (`fo4_play::ahead::Ahead`), which opens records and files of its own from the run's
+manifest and builds it as a build in place would (`world::build` about that square's cell, the same options). The
+request and the finished world cross by channel; nothing is shared. At the crossing the walker takes it (waiting
+for it when it is still being built); a world kept from a square crossed back into is taken as before; a square
+never asked, or replaced by a newer request before its build began, is built in place. Which way a world came
+depends on the thread's pace, but the world does not, so the run is the same: B and A of the 32nd sessions
+replayed with it give the sessions' outputs byte for byte (play.txt only adds its switch line and the count of
+squares asked). The window's own drawing load of the new square still runs at the crossing.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

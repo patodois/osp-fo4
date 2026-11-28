@@ -85,6 +85,13 @@ pub fn walker(l: &Log, report: &mut String) {
             crate::rules::HELD_DOORS
         );
     }
+    if l.ahead > 0 {
+        let _ = writeln!(
+            report,
+            "build ahead: {} grid squares asked ahead (--play-build-ahead)",
+            l.ahead
+        );
+    }
     for (from, to, n, what, top) in &l.walls {
         let reach = top.map_or_else(
             || "no steep shape touching".to_string(),

@@ -126,8 +126,11 @@ The preset's other switches belong to no rule of their own: they choose what the
 mode runs (viewer or play-mode policy, the caller's values): `--walk`, `--terrain`, `--around`, `--no-stream`,
 `--play-keys`, `--play-stand`, `--play-reach`, `--play-follow-grid`, `--play-slice`, `--play-held-cue` (the status
 line's "blocked" after half a second held against a shape, "low obstacle" when the shapes holding the walker
-reach at most 36 units above the feet (a knee for its 120-unit eye; the highest contact, since round 34), "no ground beyond" at the land's edge of `--play-land-edge`, kept up to 8 s after the key is let go while
-the walker stands there, on a row of its own below the objective: a viewer aid), and `--timeline-cast` (the
+reach at most 36 units above the feet (a knee for its 120-unit eye; the highest contact, since round 34), "no
+ground beyond" at the land's edge of `--play-land-edge`, kept up to 8 s after the key is let go while
+the walker stands there, on a row of its own below the objective: a viewer aid), `--play-build-ahead` (the
+walking world of the grid square the walker nears is built on a thread of its own and taken at the crossing; the
+world and the run are the ones a build in place gives, only the wait changes), and `--timeline-cast` (the
 run's actors drawn as their characters; how they stand and move is the rules of the `--timeline-*` and
 `--actor-*` rows and of the hypotheses level).
 

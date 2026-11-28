@@ -16,6 +16,7 @@ use fo4_plugin::{typed::Store, FormKey};
 use fo4_scene::timeline::Timeline;
 use fo4_vm::Vm;
 
+pub mod ahead;
 pub mod elevator;
 pub mod input;
 pub mod link;

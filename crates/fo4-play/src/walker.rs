@@ -226,6 +226,11 @@ pub struct Options {
     /// worldspace, a tick that would take the feet from a grid square with
     /// loaded terrain into one without it is not taken.
     pub land_edge: bool,
+    /// `--play-build-ahead` (a play-mode policy that changes no outcome):
+    /// in a worldspace with the follow grid, the walking world of the grid
+    /// square the walker nears is built on a thread of its own
+    /// ([`crate::ahead`]) and taken when the walker crosses into it.
+    pub build_ahead: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -255,6 +260,7 @@ impl Default for Options {
             report_platforms: false,
             held_cue: false,
             land_edge: false,
+            build_ahead: false,
         }
     }
 }
@@ -402,6 +408,9 @@ pub struct Log {
     pub blocked: u64,
     /// Ticks undone at the land's edge (`play_walk_held_at_land_edge_v1`).
     pub land_edge: u64,
+    /// `--play-build-ahead`: grid squares asked ahead (independent of the
+    /// thread's pace; how each crossing got its world is not kept here).
+    pub ahead: u64,
     pub stepped: u64,
     /// Ticks the walker ended in the air.
     pub airborne: u64,
@@ -888,6 +897,9 @@ pub struct Walker {
     /// the walker just left is the kept one ([`Walker::load`]): the same
     /// build of the same records, so the same world.
     kept: [Option<(FormKey, crate::world::Options, crate::world::Built)>; 2],
+    /// `--play-build-ahead`: the thread building the square the walker
+    /// nears, started at the first need.
+    ahead: Option<crate::ahead::Ahead<AheadKey, crate::world::Built>>,
     /// Told when a walking world is about to be built about a cell
     /// (`Some`) and when it is built (`None`): a window that draws what the
     /// walker walks in can start loading that cell at once.
@@ -903,6 +915,43 @@ pub struct Walker {
     /// `--play-action-after-offset`): only the rule is noted here, the run
     /// reads the seconds from its switches.
     written: bool,
+}
+
+/// What a world built ahead is asked by: the worldspace, the grid square
+/// and the options of the build.
+pub type AheadKey = (FormKey, [i32; 2], crate::world::Options);
+
+/// How near (units) the feet come to a grid square's edge before the
+/// square beyond it is built ahead (`--play-build-ahead`): about 4.4 s of
+/// running at 350 units a second, more than the 3.5 s a warm build took at
+/// the first bridge. A play-mode policy, nothing about the game.
+pub const AHEAD_LEAD: f64 = 1536.0;
+
+/// The grid square beyond the edge of `sq` nearest the feet, when the feet
+/// stand within [`AHEAD_LEAD`] of it (`--play-build-ahead`); `None` in the
+/// square's middle.
+pub fn ahead_square(feet: [f64; 3], sq: [i32; 2]) -> Option<[i32; 2]> {
+    let side = crate::world::CELL_SIZE;
+    let local = [
+        feet[0] - f64::from(sq[0]) * side,
+        feet[1] - f64::from(sq[1]) * side,
+    ];
+    // (distance to the edge, step across it) along each axis.
+    let near = |v: f64| -> (f64, i32) {
+        if v < side - v {
+            (v, -1)
+        } else {
+            (side - v, 1)
+        }
+    };
+    let (dx, sx) = near(local[0]);
+    let (dy, sy) = near(local[1]);
+    let (d, step) = if dx <= dy {
+        (dx, [sx, 0])
+    } else {
+        (dy, [0, sy])
+    };
+    (d < AHEAD_LEAD).then(|| [sq[0] + step[0], sq[1] + step[1]])
 }
 
 /// What [`Walker::with_on_load`] calls: the cell a walking world is about
@@ -980,6 +1029,7 @@ impl Walker {
                 ..Log::default()
             })),
             kept: [None, None],
+            ahead: None,
             on_load: None,
             opens: Vec::new(),
             persons: Vec::new(),
@@ -2440,6 +2490,10 @@ impl Walker {
             return Ok(());
         }
         if g.centre == here {
+            if self.opts.build_ahead {
+                let (space, feet) = (space.clone(), c.feet);
+                self.ask_ahead(run, &space, feet, sq)?;
+            }
             return Ok(());
         }
         let started = std::time::Instant::now();
@@ -2447,9 +2501,44 @@ impl Walker {
         let b = Budget::new(m.limits.max_memory);
         let space = space.clone();
         let feet = c.feet;
-        let cell =
-            crate::world::start_cell(run.store, &space, feet, &b).map_err(|e| e.to_string())?;
-        self.load(run, &cell)?;
+        let options = self.world_options();
+        // A world kept from a square crossed back into is taken as before.
+        let kept_here = self.kept_square(run, &space, sq, options);
+        let ahead = match self.ahead.as_mut().filter(|_| !kept_here) {
+            Some(a) => {
+                let ready = a.ready(&(space.clone(), sq, options));
+                let waited = std::time::Instant::now();
+                let got = a.take(&(space.clone(), sq, options));
+                // How it came depends on the thread's pace: the run's
+                // outputs do not carry it.
+                match &got {
+                    Some(_) => {
+                        eprintln!(
+                            "play: build ahead: square {sq:?} at {:.3} s {}",
+                            self.t,
+                            if ready {
+                                "finished before the crossing".to_string()
+                            } else {
+                                format!("waited for {:.2} s", waited.elapsed().as_secs_f64())
+                            }
+                        );
+                    }
+                    None => eprintln!(
+                        "play: build ahead: square {sq:?} at {:.3} s built in place",
+                        self.t
+                    ),
+                }
+                got.transpose()?
+            }
+            None => None,
+        };
+        let cell = match &ahead {
+            Some(built) => built.cell.clone(),
+            None => {
+                crate::world::start_cell(run.store, &space, feet, &b).map_err(|e| e.to_string())?
+            }
+        };
+        self.load_with(run, &cell, ahead)?;
         if let Some(g) = &mut self.grid {
             g.centre = here;
         }
@@ -2460,18 +2549,90 @@ impl Walker {
         Ok(())
     }
 
+    /// `--play-build-ahead`: asks for the walking world of the square the
+    /// feet near ([`ahead_square`]), starting the thread at the first need
+    /// with records and files of its own, opened from the run's manifest.
+    fn ask_ahead(
+        &mut self,
+        run: &View<'_, '_>,
+        space: &FormKey,
+        feet: [f64; 3],
+        sq: [i32; 2],
+    ) -> Result<(), String> {
+        let Some(next) = ahead_square(feet, sq) else {
+            return Ok(());
+        };
+        let options = self.world_options();
+        if self.kept_square(run, space, next, options) {
+            return Ok(());
+        }
+        if self.ahead.is_none() {
+            let m = run.sources.0.clone();
+            self.ahead = Some(crate::ahead::Ahead::spawn(move || {
+                let opened =
+                    fo4_plugin::typed::Store::open(&m, &Budget::new(m.limits.max_override_memory))
+                        .map_err(|e| e.to_string())
+                        .and_then(|store| {
+                            fo4_vfs::Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))
+                                .map(|vfs| (store, vfs))
+                                .map_err(|e| e.to_string())
+                        });
+                move |k: &AheadKey| -> Result<crate::world::Built, String> {
+                    let (store, vfs) = opened.as_ref().map_err(Clone::clone)?;
+                    let side = crate::world::CELL_SIZE;
+                    let middle = [
+                        (f64::from(k.1[0]) + 0.5) * side,
+                        (f64::from(k.1[1]) + 0.5) * side,
+                        0.0,
+                    ];
+                    let b = Budget::new(m.limits.max_memory);
+                    let cell = crate::world::start_cell(store, &k.0, middle, &b)
+                        .map_err(|e| e.to_string())?;
+                    crate::world::build(&m, store, vfs, &cell, k.2).map_err(|e| e.to_string())
+                }
+            })?);
+        }
+        if let Some(a) = self.ahead.as_mut() {
+            let before = a.counts[0];
+            a.ask((space.clone(), next, options));
+            self.log.borrow_mut().ahead += a.counts[0] - before;
+        }
+        Ok(())
+    }
+
+    /// Whether a kept walking world ([`Walker::load`]) was built with
+    /// `options` about the cell of grid square `sq` of `space`.
+    fn kept_square(
+        &self,
+        run: &View<'_, '_>,
+        space: &FormKey,
+        sq: [i32; 2],
+        options: crate::world::Options,
+    ) -> bool {
+        let b = Budget::new(1 << 20);
+        self.kept.iter().flatten().any(|(cell, o, built)| {
+            *o == options
+                && built.space == *space
+                && fo4_scene::grid::grid_of(run.store, cell, &b).ok().flatten() == Some(sq)
+        })
+    }
+
     /// Builds the walking world about `cell` in place of the present one
     /// (the live world's state applied again); returns its report.
     fn load(&mut self, run: &View<'_, '_>, cell: &FormKey) -> Result<String, String> {
+        self.load_with(run, cell, None)
+    }
+
+    /// The options the walking worlds are built with.
+    fn world_options(&self) -> crate::world::Options {
         let around = self
             .grid
             .as_ref()
             .map(|g| g.around)
             .or(self.doors.as_ref().map(|d| d.around))
             .unwrap_or(0);
-        let (m, vfs) = run.sources;
         let follows = self.live.follows();
-        let options = crate::world::Options {
+        crate::world::Options {
             around,
             live: follows,
             doors: self.doors.is_some(),
@@ -2486,7 +2647,20 @@ impl Walker {
             stored_open: self.opts.door_stored_open,
             persistent: self.opts.persistent,
             light_movables: self.opts.light_movables,
-        };
+        }
+    }
+
+    /// [`Walker::load`], with the world built ahead for it when there is
+    /// one (`--play-build-ahead`): the same world a build here gives.
+    fn load_with(
+        &mut self,
+        run: &View<'_, '_>,
+        cell: &FormKey,
+        ahead: Option<crate::world::Built>,
+    ) -> Result<String, String> {
+        let (m, vfs) = run.sources;
+        let follows = self.live.follows();
+        let options = self.world_options();
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
         }
@@ -2500,6 +2674,9 @@ impl Walker {
             Some(i) => self.kept[i].clone().map(|k| k.2),
             None => None,
         };
+        if built.is_none() {
+            built = ahead;
+        }
         if built.is_none() {
             let b = crate::world::build(m, run.store, vfs, cell, options);
             built = Some(b.map_err(|e| e.to_string())?);

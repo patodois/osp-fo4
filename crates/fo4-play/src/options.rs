@@ -151,6 +151,10 @@ pub struct Play {
     /// worldspace the walker does not step from a grid square with loaded
     /// terrain into one of the follow grid without it.
     pub land_edge: bool,
+    /// `--play-build-ahead` (a play-mode policy that changes no outcome):
+    /// the walking world of the grid square the walker nears is built on a
+    /// thread of its own ([`crate::ahead`]).
+    pub build_ahead: bool,
     /// `--play-action-after-offset` (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
     /// the run's `--action-after-offset`, and each timed open or
@@ -242,6 +246,7 @@ impl Play {
             "--play-report-platforms" => &mut self.report_platforms,
             "--play-held-cue" => &mut self.held_cue,
             "--play-land-edge" => &mut self.land_edge,
+            "--play-build-ahead" => &mut self.build_ahead,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
@@ -616,6 +621,7 @@ impl Play {
         opts.report_platforms = self.report_platforms;
         opts.held_cue = self.held_cue;
         opts.land_edge = self.land_edge;
+        opts.build_ahead = self.build_ahead;
         opts
     }
 
@@ -701,6 +707,9 @@ impl Play {
         }
         if self.land_edge {
             let _ = writeln!(report, "switch: in a worldspace the walker does not step from a grid square whose terrain the walking world loaded into one of the follow grid without it; it stands, held (--play-land-edge, {})", crate::rules::LAND_EDGE);
+        }
+        if self.build_ahead {
+            let _ = writeln!(report, "switch: the walking world of the grid square the walker nears (within {} units of its edge) is built on a thread of its own and taken at the crossing; the world is the one a build in place gives (--play-build-ahead, a play-mode policy, no rule)", crate::walker::AHEAD_LEAD);
         }
         if self.step_lookahead {
             let _ = writeln!(report, "switch: the walker's step-up tries the retries one radius, half and a quarter of a radius ahead before it takes a retry with the tick's own move that does not climb (--play-step-lookahead, {})", fo4_walk::rules::STEP_LOOKAHEAD);

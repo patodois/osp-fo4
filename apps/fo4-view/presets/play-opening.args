@@ -119,6 +119,11 @@
 # (play_walk_held_at_land_edge_v1): it stands at the land's edge and the
 # status line says "blocked - no ground beyond".
 --play-land-edge
+# The walking world of the grid square the walker nears is built on a thread
+# of its own and taken when the walker crosses into it: the same world, so
+# the same run, with less of the play clock standing (a play-mode policy,
+# no rule).
+--play-build-ahead
 # E meets what the crosshair enters first (play_activate_ray_first_met_v1).
 --play-pick-first-met
 # The caller's actions held until a stage keep their offset from it, and the

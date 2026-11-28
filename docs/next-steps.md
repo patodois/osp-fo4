@@ -478,6 +478,21 @@ own refusals (collision build, persistent join: a reference's data limit is that
 vault table is not seen; the containers' fields (drawing and collision together); a memo of parsed collision models
 for the dream's hold; the player's pod drawn open.
 
+Thirty-fourth-round fixes (the thirty-second sessions; `spec/play.md`, the thirty-second-session step): the
+river's straight seams were the terrain's texture passes sorted with the water by each mesh's middle (a quadrant's
+pass nearer than the water square's middle added its texture over the water); the passes now come before every
+other blended surface, on the GPU and in the CPU frame (no rule; every loaded square there stores the same height).
+`blocked - low obstacle` now follows the highest contact (`fo4_walk::WorldSet::highest_steep_touch`,
+`fo4_play::walker::held_top`) and a knee's 36 units (`hud::HELD_LOW`): the barricade's rail and the crane yard's
+machine reach 85 to 100 units and read `blocked`, the bank's lip 31. The rails "missing after a load" were drawn
+beside the eye, out of the frame; the missing road over pale ground is the prewar worldspace's data. `--play-build-ahead`
+(in the preset, no rule) builds the walking world of the square the walker nears on a thread of its own and hands
+it over at the crossing: the same world, the same run, the walking world's part of the stand at the first bridge
+from 3.3 s to under a tenth of a second headless (`fo4_play::ahead`). Next: load the drawing of the square ahead on
+the window's data thread too (the window's 1.7 s load and 0.4 s upload still stand at a crossing), the dream's
+hold (a sit, not a grid crossing), the way out of the channel and the lower town's footings (not probed), the
+parked car's height, the cone at the camera, the containers, the pod drawn open.
+
 Thirty-third-round fixes (the thirty-first sessions): the held cue was on in the live window at every push the
 person reported (the window log names the status line's causes at each change), but the person looked 3.5 to 6 s
 after letting go, past the 2 s it stayed, and one push held the walker under the second it took: it now says
