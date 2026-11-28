@@ -240,18 +240,17 @@ pub struct Shown {
 
 /// A named platform as the status line reads it: the boxes of its moving
 /// parts' collision where they stand now, whether one carries the walker,
-/// whether the run started its move after the walker's activation in the
-/// walker's present space (`fo4_play::elevator::Platform::after_activation`),
-/// the second its started sequences' last motion ends, when still to
-/// come (`fo4_play::elevator::Platform::moves_until`), and the second the
-/// motion of the part carrying the walker ends, when still to come
-/// (`fo4_play::elevator::Platform::carried_until`).
+/// and that part's own visible motion
+/// (`fo4_play::elevator::Platform::carried_moving`, `carried_starts`,
+/// `carried_until`): whether it moves now, the second it sets off when it
+/// stands and a started sequence moves it later, the second its motion
+/// ends.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlatformNear {
     pub boxes: Vec<([f64; 3], [f64; 3])>,
     pub carries: bool,
-    pub after_activation: bool,
-    pub moves_until: Option<f64>,
+    pub carried_moving: bool,
+    pub carried_starts: Option<f64>,
     pub carried_until: Option<f64>,
 }
 
@@ -263,18 +262,19 @@ pub const PLATFORM_NEAR: f64 = 300.0;
 pub const PLATFORM_READY_SECONDS: f64 = 4.0;
 
 /// The status line's platform cue at second `t` for a walker whose feet
-/// stand at `feet`: "platform moving - ready in N s" while a platform
-/// near the walker moves under a sequence the run started, a platform the
-/// cue speaks of: one that carries the walker or whose move the run
-/// started after the walker's activation (N: whole seconds to the last
-/// motion's end, rounded up; for a platform that carries the walker, the
-/// end of the carrying part's own motion: once the deck under the walker
-/// stands, what its other parts still do is not counted); other platforms
-/// say nothing. Then
-/// "platform ready" for [`PLATFORM_READY_SECONDS`] after `ended` (the end
-/// second the cue last counted down to, kept by the caller); `None`
-/// otherwise. Returns the cue and the end second to keep. Viewer policy:
-/// the end is the sequences' own last key, nothing about the game.
+/// stand at `feet`. It speaks only of a platform one of whose parts
+/// carries the walker, and only of that part's own motion: "platform
+/// moving - ready in N s" while the part moves (N: whole seconds to the
+/// end of its motion, rounded up); "platform starts in N s" while it
+/// stands and a sequence the run started moves it later (N: whole seconds
+/// to that start); "platform ready" for [`PLATFORM_READY_SECONDS`] after
+/// `ended` (the end second the cue last counted down to, kept by the
+/// caller) while the walker is still on it; `None` otherwise, and always
+/// when no part carries the walker (a platform beside the walker, even one
+/// its activation set off, says nothing). Returns the cue and the end
+/// second to keep. Viewer policy: the seconds are the sequences' own keys
+/// read as visible motion (`fo4_play::elevator::CUE_STILL`), nothing about
+/// the game.
 pub fn platform_status(
     near: &[PlatformNear],
     feet: [f64; 3],
@@ -285,18 +285,14 @@ pub fn platform_status(
         let d = |i: usize| (b.0[i] - feet[i]).max(feet[i] - b.1[i]).max(0.0);
         d(0).hypot(d(1)) <= PLATFORM_NEAR && d(2) <= PLATFORM_NEAR
     };
-    let ours = |p: &&PlatformNear| (p.carries || p.after_activation) && p.boxes.iter().any(close);
-    let moving = near
+    let ours: Vec<&PlatformNear> = near
         .iter()
-        .filter(ours)
-        .filter_map(|p| {
-            if p.carries {
-                p.carried_until
-            } else {
-                p.moves_until
-            }
-            .filter(|e| *e > t)
-        })
+        .filter(|p| p.carries && p.boxes.iter().any(close))
+        .collect();
+    let moving = ours
+        .iter()
+        .filter(|p| p.carried_moving)
+        .filter_map(|p| p.carried_until.filter(|e| *e > t))
         .fold(None, |m: Option<f64>, e| Some(m.map_or(e, |m| m.max(e))));
     if let Some(e) = moving {
         let n = (e - t).ceil().max(1.0);
@@ -305,11 +301,19 @@ pub fn platform_status(
             Some(e),
         );
     }
+    let starts = ours
+        .iter()
+        .filter_map(|p| p.carried_starts.filter(|s| *s > t))
+        .fold(None, |m: Option<f64>, s| Some(m.map_or(s, |m| m.min(s))));
+    if let Some(s) = starts {
+        let n = (s - t).ceil().max(1.0);
+        return (Some(format!("platform starts in {n:.0} s")), ended);
+    }
     match ended {
-        Some(e) if t >= e && t - e < PLATFORM_READY_SECONDS => {
-            let still_near = near.iter().any(|p| ours(&p));
-            (still_near.then(|| "platform ready".to_string()), Some(e))
-        }
+        Some(e) if t >= e && t - e < PLATFORM_READY_SECONDS => (
+            (!ours.is_empty()).then(|| "platform ready".to_string()),
+            Some(e),
+        ),
         Some(e) if t < e => (None, Some(e)),
         _ => (None, None),
     }
@@ -460,98 +464,120 @@ mod tests {
         assert_eq!(held.text(Slot::Status, 80).unwrap(), "loading");
     }
 
-    #[test]
-    fn a_moving_platform_near_the_walker_counts_down_to_its_last_motion() {
-        let p = |moves_until: Option<f64>, carries: bool| PlatformNear {
+    /// A deck under the walker: its own motion's seconds.
+    fn deck(moving: bool, starts: Option<f64>, until: Option<f64>) -> PlatformNear {
+        PlatformNear {
             boxes: vec![([0.0, 0.0, 50.0], [100.0, 100.0, 140.0])],
-            carries,
-            after_activation: !carries,
-            moves_until,
-            carried_until: moves_until.filter(|_| carries),
-        };
-        let feet = [150.0, 50.0, 0.0];
-        // Moving, near, started after the walker's activation: the seconds
-        // to the end, rounded up.
-        let (cue, kept) = platform_status(&[p(Some(43.3), false)], feet, 10.0, None);
+            carries: true,
+            carried_moving: moving,
+            carried_starts: starts,
+            carried_until: until,
+        }
+    }
+
+    #[test]
+    fn a_moving_deck_under_the_walker_counts_down_to_the_end_of_its_motion() {
+        let feet = [50.0, 50.0, 140.0];
+        let (cue, kept) = platform_status(&[deck(true, None, Some(43.3))], feet, 10.0, None);
         assert_eq!(cue.as_deref(), Some("platform moving - ready in 34 s"));
         assert_eq!(kept, Some(43.3));
-        // Carrying the walker: the same count.
-        let (cue, _) = platform_status(&[p(Some(43.3), true)], feet, 10.0, None);
-        assert_eq!(cue.as_deref(), Some("platform moving - ready in 34 s"));
-        // Far away: nothing.
+        // Far away (a box the walker is not near): nothing.
         let far = [150.0 + PLATFORM_NEAR + 1.0, 50.0, 0.0];
         assert_eq!(
-            platform_status(&[p(Some(43.3), false)], far, 10.0, None),
+            platform_status(&[deck(true, None, Some(43.3))], far, 10.0, None),
             (None, None)
         );
         // Stopped: "platform ready" for a few seconds after the kept end.
-        let (cue, kept) = platform_status(&[p(None, false)], feet, 44.0, Some(43.3));
+        let (cue, kept) = platform_status(&[deck(false, None, None)], feet, 44.0, Some(43.3));
         assert_eq!(cue.as_deref(), Some("platform ready"));
         assert_eq!(kept, Some(43.3));
         let late = 43.3 + PLATFORM_READY_SECONDS + 0.1;
         assert_eq!(
-            platform_status(&[p(None, false)], feet, late, Some(43.3)),
+            platform_status(&[deck(false, None, None)], feet, late, Some(43.3)),
             (None, None)
         );
     }
 
-    /// The 28th sessions: the cue also spoke near platforms the person had
-    /// nothing to do with (the lower grille, the surface lift after the
-    /// ride). A near platform moving that neither carries the walker nor
-    /// was started after its activation says nothing, before and after.
+    /// The 30th sessions (a): on the surface lift's upper deck the count
+    /// ran while the deck stood (its first sequence holds the deck's pose,
+    /// with noise in its keys). A deck that stands says when it sets off,
+    /// when that is known, and nothing else; the count starts when it moves.
     #[test]
-    fn a_platform_neither_under_the_walker_nor_set_off_by_it_says_nothing() {
-        let other = |moves_until: Option<f64>| PlatformNear {
-            boxes: vec![([0.0, 0.0, 50.0], [100.0, 100.0, 140.0])],
+    fn a_standing_deck_under_the_walker_says_when_it_starts_not_that_it_moves() {
+        let feet = [50.0, 50.0, 140.0];
+        let (cue, kept) = platform_status(&[deck(false, Some(12.4), Some(31.0))], feet, 10.0, None);
+        assert_eq!(cue.as_deref(), Some("platform starts in 3 s"));
+        assert_eq!(kept, None);
+        // Standing with no start known: nothing.
+        assert_eq!(
+            platform_status(&[deck(false, None, None)], feet, 10.0, None),
+            (None, None)
+        );
+        // Then moving: the count to its own end.
+        let (cue, _) = platform_status(&[deck(true, None, Some(31.0))], feet, 12.5, None);
+        assert_eq!(cue.as_deref(), Some("platform moving - ready in 19 s"));
+    }
+
+    /// The 30th sessions (b): beside the exit ramp, on the fixed floor, the
+    /// count ran for the ramp the person's activation set moving. And the
+    /// 28th: platforms the person had nothing to do with. A platform none
+    /// of whose parts carries the walker says nothing, moving or stopped.
+    #[test]
+    fn a_platform_not_under_the_walker_says_nothing() {
+        let beside = |moving: bool, until: Option<f64>| PlatformNear {
             carries: false,
-            after_activation: false,
-            moves_until,
-            carried_until: None,
+            ..deck(moving, None, until)
         };
         let feet = [150.0, 50.0, 0.0];
         assert_eq!(
-            platform_status(&[other(Some(43.3))], feet, 10.0, None),
+            platform_status(&[beside(true, Some(43.3))], feet, 10.0, None),
             (None, None)
         );
         assert_eq!(
-            platform_status(&[other(None)], feet, 44.0, Some(43.3)).0,
+            platform_status(&[beside(false, None)], feet, 44.0, Some(43.3)).0,
             None
         );
-        // Beside the walker's own platform, the other's later end is not
+        // Beside the walker's own deck, the other's later end is not
         // counted down to.
-        let own = PlatformNear {
-            after_activation: true,
-            moves_until: Some(20.0),
-            ..other(None)
-        };
-        let (cue, kept) = platform_status(&[other(Some(43.3)), own], feet, 10.0, None);
+        let own = deck(true, None, Some(20.0));
+        let (cue, kept) = platform_status(
+            &[beside(true, Some(43.3)), own],
+            [50.0, 50.0, 140.0],
+            10.0,
+            None,
+        );
         assert_eq!(cue.as_deref(), Some("platform moving - ready in 10 s"));
         assert_eq!(kept, Some(20.0));
     }
 
+    /// The 30th sessions (c): just after the load door that puts the walker
+    /// on the rising surface deck, the count is the deck's own rise (it
+    /// moves from its sequence's first key): it shows, and goes down.
+    #[test]
+    fn the_deck_a_load_door_puts_the_walker_on_counts_its_own_rise() {
+        let feet = [50.0, 50.0, 140.0];
+        let rising = deck(true, None, Some(1703.9));
+        let (cue, kept) = platform_status(&[rising.clone()], feet, 1692.5, Some(1692.1));
+        assert_eq!(cue.as_deref(), Some("platform moving - ready in 12 s"));
+        assert_eq!(kept, Some(1703.9));
+        let (cue, _) = platform_status(&[rising], feet, 1698.0, kept);
+        assert_eq!(cue.as_deref(), Some("platform moving - ready in 6 s"));
+    }
+
     /// The 29th sessions: on the lower deck, settled under the walker
     /// while the run's scene held it, the cue counted down to the end of
-    /// the deck's sequence, whose other parts (the grille's) still moved.
-    /// A carrying platform counts only its carrying part's own motion.
+    /// the deck's sequence, whose other parts still moved. The carrying
+    /// part's own motion is all that counts.
     #[test]
     fn a_settled_deck_under_the_walker_counts_nothing_while_its_other_parts_move() {
-        let deck = |carried_until: Option<f64>| PlatformNear {
-            boxes: vec![([0.0, 0.0, 50.0], [100.0, 100.0, 140.0])],
-            carries: true,
-            after_activation: true,
-            moves_until: Some(56.8),
-            carried_until,
-        };
         let feet = [50.0, 50.0, 140.0];
-        // Still descending: the deck's own end.
-        let (cue, kept) = platform_status(&[deck(Some(43.3))], feet, 40.0, None);
+        let (cue, kept) = platform_status(&[deck(true, None, Some(43.3))], feet, 40.0, None);
         assert_eq!(cue.as_deref(), Some("platform moving - ready in 4 s"));
         assert_eq!(kept, Some(43.3));
-        // Settled: no count, "platform ready" a moment, then nothing.
-        let (cue, _) = platform_status(&[deck(None)], feet, 46.7, Some(43.3));
+        let (cue, _) = platform_status(&[deck(false, None, None)], feet, 46.7, Some(43.3));
         assert_eq!(cue.as_deref(), Some("platform ready"));
         assert_eq!(
-            platform_status(&[deck(None)], feet, 50.0, Some(43.3)),
+            platform_status(&[deck(false, None, None)], feet, 50.0, Some(43.3)),
             (None, None)
         );
     }

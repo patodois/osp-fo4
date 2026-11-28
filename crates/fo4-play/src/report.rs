@@ -91,6 +91,13 @@ pub fn walker(l: &Log, report: &mut String) {
             "wall: blocked from {from} to {to} s ({n} ticks) against {what} (--play-report-walls)"
         );
     }
+    for (t, k, what) in &l.platforms {
+        let _ = writeln!(
+            report,
+            "platform: at {t:.3} s {}: {what} (--play-report-platforms)",
+            fo4_vm::bind::record_key(k)
+        );
+    }
     for (t, cell, feet, secs) in &l.grid {
         let _ = writeln!(
             report,

@@ -212,6 +212,9 @@ pub struct Options {
     /// Record each stretch of blocked ticks with what blocked it
     /// ([`Log::walls`]; `--play-report-walls`, a report only).
     pub report_walls: bool,
+    /// Record each change of what the named platforms' parts do under the
+    /// walker ([`Log::platforms`]; `--play-report-platforms`, a report only).
+    pub report_platforms: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -237,6 +240,7 @@ impl Default for Options {
             first_met: false,
             pick_actors: false,
             report_walls: false,
+            report_platforms: false,
         }
     }
 }
@@ -326,6 +330,10 @@ pub struct Log {
     /// against the same source, (first second, last second, ticks, what
     /// blocked: [`Live::describe_source`]).
     pub walls: Vec<(f64, f64, u64, String)>,
+    /// With [`Options::report_platforms`]: each change of a named
+    /// platform's state under the walker, (second, reference, what:
+    /// [`platform_state`]).
+    pub platforms: Vec<(f64, FormKey, String)>,
 }
 
 /// Why a held door's box entered or left the walking world
@@ -689,6 +697,9 @@ pub struct Walker {
     state: RunState,
     /// The held doors whose boxes the log last gave as standing.
     held_logged: std::collections::BTreeSet<FormKey>,
+    /// `--play-report-platforms`: each named platform's state the log last
+    /// gave ([`platform_state`]).
+    platforms_logged: Vec<String>,
     /// The doors the person's activation opened since the log last read
     /// the boxes (`--play-door-toggle`).
     toggled_open: std::collections::BTreeSet<FormKey>,
@@ -810,6 +821,7 @@ impl Walker {
             live,
             state: RunState::reading_doors(opts.held_doors),
             held_logged: Default::default(),
+            platforms_logged: Vec::new(),
             toggled_open: Default::default(),
             nowait: false,
             doors: None,
@@ -1945,6 +1957,7 @@ impl Walker {
             }
             self.t = until;
             actions.extend(self.commands()?);
+            self.report_platforms();
             let mut log = self.log.borrow_mut();
             log.standing_slices += 1;
             log.points += points.len() as u64;
@@ -2027,6 +2040,7 @@ impl Walker {
         }
         self.t = to;
         actions.extend(self.commands()?);
+        self.report_platforms();
         let mut log = self.log.borrow_mut();
         log.points += points.len() as u64;
         log.track.extend(points.iter().cloned());
@@ -2038,7 +2052,51 @@ impl Walker {
     }
 }
 
+/// A named platform's state under the walker, as `--play-report-platforms`
+/// gives it: whether a part carries the walker (its index), whether that
+/// part moves now, when its next motion begins and when its motion last
+/// changes, when the platform's motion ends, whether the run started its
+/// move after the walker's activation. Seconds to a hundredth.
+pub fn platform_state(p: &crate::elevator::Platform) -> String {
+    let s = |x: Option<f64>| x.map_or_else(|| "-".to_string(), |x| format!("{x:.2}"));
+    let carrying = p.parts.iter().position(|m| m.carries);
+    format!(
+        "carried by {}; {}; part starts {}, part ends {}; platform ends {}; after activation {}",
+        carrying.map_or_else(|| "no part".to_string(), |i| format!("part {i}")),
+        if p.carried_moving {
+            "moving"
+        } else {
+            "standing"
+        },
+        s(p.carried_starts),
+        s(p.carried_until),
+        s(p.moves_until),
+        p.after_activation
+    )
+}
+
 impl Walker {
+    /// `--play-report-platforms`: logs each named platform whose state
+    /// ([`platform_state`]) changed since the log last gave it.
+    fn report_platforms(&mut self) {
+        if !self.opts.report_platforms || self.elevators.is_empty() {
+            return;
+        }
+        let now: Vec<(FormKey, String)> = self
+            .platforms()
+            .iter()
+            .map(|p| (p.reference.clone(), platform_state(p)))
+            .collect();
+        self.platforms_logged.resize(now.len(), String::new());
+        let mut log = self.log.borrow_mut();
+        for (i, (k, s)) in now.into_iter().enumerate() {
+            if self.platforms_logged[i] != s {
+                log.platforms.push((self.t, k, s.clone()));
+                self.platforms_logged[i] = s;
+            }
+        }
+    }
+
     /// Applies the run's state to the live world when it changed.
     fn follow(&mut self, vm: &fo4_vm::Vm<'_>) -> Result<(), String> {
         if !self.live.follows() || !self.state.update(vm) {

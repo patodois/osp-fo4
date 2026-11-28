@@ -2052,9 +2052,8 @@ fn hud_update(
         .1
         .is_some_and(|at| at.elapsed().as_secs_f64() > HUD_STOOD_SECONDS);
     let texts = p.spoken_texts();
-    // A named platform near the walker, in its space, moving under a
-    // sequence the run started, that carries the walker or that the run set
-    // moving after the walker's activation (viewer policy,
+    // A named platform near the walker, in its space, one of whose parts
+    // carries the walker: that part's own motion (viewer policy,
     // `crate::hud::platform_status`).
     let same_space = |k: &fo4_plugin::FormKey| {
         seen.space
@@ -2068,8 +2067,8 @@ fn hud_update(
         .map(|pl| crate::hud::PlatformNear {
             boxes: pl.parts.iter().filter_map(|m| m.box_now()).collect(),
             carries: pl.parts.iter().any(|m| m.carries),
-            after_activation: pl.after_activation,
-            moves_until: pl.moves_until,
+            carried_moving: pl.carried_moving,
+            carried_starts: pl.carried_starts,
             carried_until: pl.carried_until,
         })
         .collect();
@@ -2121,6 +2120,13 @@ fn hud_update(
                 .platform
                 .as_deref()
                 .is_some_and(|t| t.starts_with("platform moving")),
+        ),
+        (
+            "a platform under the walker about to start",
+            shown
+                .platform
+                .as_deref()
+                .is_some_and(|t| t.starts_with("platform starts")),
         ),
         (
             "a platform near the walker ready",

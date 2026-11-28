@@ -99,6 +99,51 @@ fn platform(a: &[String]) -> Result<(), E> {
                 let w = base.copy_sources_moved(&all, m, &b)?;
                 println!("    {name} last key {last:.2} s: {:?}", rounded(&w));
             }
+            // How far the box's corners go from where the track starts and
+            // between keys (a sequence's held pose may repeat its keys
+            // with a little noise).
+            if let (Some(first), Some(bx)) = (t.first(), base.bounds) {
+                let corners: Vec<[f64; 3]> = (0..8)
+                    .map(|k| {
+                        std::array::from_fn(|i| {
+                            if k & (1 << i) != 0 {
+                                bx.max[i]
+                            } else {
+                                bx.min[i]
+                            }
+                        })
+                    })
+                    .collect();
+                let off = |a: &fo4_walk::Motion, z: &fo4_walk::Motion| {
+                    corners
+                        .iter()
+                        .map(|c| {
+                            fo4_walk::geometry::length(fo4_walk::geometry::sub(
+                                a.apply(*c),
+                                z.apply(*c),
+                            ))
+                        })
+                        .fold(0.0f64, f64::max)
+                };
+                let mut moved_from = None;
+                let mut step_max = 0.0f64;
+                let mut from_first = 0.0f64;
+                for w in t.windows(2) {
+                    let d = off(&w[0].1, &w[1].1);
+                    step_max = step_max.max(d);
+                    let f = off(&first.1, &w[1].1);
+                    from_first = from_first.max(f);
+                    if moved_from.is_none() && f > 1.0 {
+                        moved_from = Some(w[0].0);
+                    }
+                }
+                println!(
+                    "    {name}: {} keys over {:.2} s; corners go at most {from_first:.3} from the first key, {step_max:.4} between keys; first more than 1 unit from the first key at {}",
+                    t.len(),
+                    t.last().map_or(0.0, |l| l.0),
+                    moved_from.map_or("-".to_string(), |x: f64| format!("{x:.2} s"))
+                );
+            }
         }
     }
     Ok(())

@@ -308,6 +308,86 @@ pub fn last_change(track: &[(f64, Motion)]) -> Option<f64> {
         .map(|w| w[1].0)
 }
 
+/// How far (world units) a point of a moving part must go from where it
+/// stood for the status line's platform cue to read the part as moving: a
+/// sequence that holds a part's pose may repeat its keys with a
+/// thousandth of a unit of noise, which the cue reads as standing (viewer
+/// policy, for the cue only: the rides and the rules read every change).
+pub const CUE_STILL: f64 = 0.05;
+
+/// The stretches of a track over which what it moves goes visibly
+/// ([`CUE_STILL`]): `dist` gives how far two keys' poses are apart. A
+/// stretch starts at the last key still within half of [`CUE_STILL`] of
+/// the pose it left and ends at the first key more than [`CUE_STILL`] from
+/// it; stretches that touch are joined. (start, end) seconds, increasing.
+fn visible_spans<M>(track: &[(f64, M)], dist: impl Fn(&M, &M) -> f64) -> Vec<(f64, f64)> {
+    let mut out: Vec<(f64, f64)> = Vec::new();
+    let (mut anchor, mut near) = (0usize, 0usize);
+    for k in 1..track.len() {
+        let d = dist(&track[anchor].1, &track[k].1);
+        if d <= 0.5 * CUE_STILL {
+            near = k;
+        }
+        if d > CUE_STILL {
+            let (s, e) = (track[near].0, track[k].0);
+            match out.last_mut() {
+                Some(l) if l.1 >= s => l.1 = e,
+                _ => out.push((s, e)),
+            }
+            anchor = k;
+            near = k;
+        }
+    }
+    out
+}
+
+/// What the status line's cue reads of a track at second `t`
+/// ([`visible_spans`]): (whether it moves at `t`, the second its next
+/// visible motion begins when it stands at `t`, the end of its last
+/// visible motion when still to come after `t`).
+fn cue_reading(spans: &[(f64, f64)], t: f64) -> (bool, Option<f64>, Option<f64>) {
+    let moving = spans.iter().any(|(s, e)| *s <= t && t < *e);
+    let starts = (!moving)
+        .then(|| spans.iter().find(|(s, _)| *s > t).map(|(s, _)| *s))
+        .flatten();
+    let ends = spans.last().map(|(_, e)| *e).filter(|e| *e > t);
+    (moving, starts, ends)
+}
+
+/// [`cue_reading`] of a rigid part's track: how far its poses are apart is
+/// the farthest any corner of `bounds` (the part's stored collision box)
+/// goes between them; with no box, how far the origin goes.
+pub fn motion_cue_at(
+    track: &[(f64, Motion)],
+    bounds: Option<([f64; 3], [f64; 3])>,
+    t: f64,
+) -> (bool, Option<f64>, Option<f64>) {
+    let corners: Vec<[f64; 3]> = match bounds {
+        Some((lo, hi)) => (0..8)
+            .map(|k| std::array::from_fn(|i| if k & (1 << i) != 0 { hi[i] } else { lo[i] }))
+            .collect(),
+        None => vec![[0.0; 3]],
+    };
+    let dist = |a: &Motion, b: &Motion| {
+        corners
+            .iter()
+            .map(|c| {
+                let (p, q) = (a.apply(*c), b.apply(*c));
+                ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2)).sqrt()
+            })
+            .fold(0.0, f64::max)
+    };
+    cue_reading(&visible_spans(track, dist), t)
+}
+
+/// [`cue_reading`] of a translation track.
+pub fn translation_cue_at(track: &[(f64, [f64; 3])], t: f64) -> (bool, Option<f64>, Option<f64>) {
+    let dist = |a: &[f64; 3], b: &[f64; 3]| {
+        ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+    };
+    cue_reading(&visible_spans(track, dist), t)
+}
+
 /// As [`last_change`] for a translation track.
 pub fn last_translation_change(track: &[(f64, [f64; 3])]) -> Option<f64> {
     track
@@ -1182,16 +1262,26 @@ pub struct Platform {
     /// The second the collision stands at (the rides' last advance).
     pub second: f64,
     pub parts: Vec<PartMotion>,
-    /// The second the last motion a started sequence keys ends, when it is
-    /// still to come (after [`Platform::second`]): the parts move until
-    /// then and stand from then on. `None`: nothing moves after `second`.
+    /// The second the last visible motion a started sequence keys ends
+    /// ([`CUE_STILL`]), when it is still to come (after
+    /// [`Platform::second`]): the parts move until then and stand from then
+    /// on. `None`: nothing moves visibly after `second`.
     pub moves_until: Option<f64>,
-    /// When a part carries the walker ([`PartMotion::carries`]): the last
-    /// second that part's own motion changes, when it is still to come
-    /// (after [`Platform::second`]). `None` when no part carries the walker
-    /// or the carrying part stands from now on, whatever the other parts
-    /// still do.
+    /// When a part carries the walker ([`PartMotion::carries`]): the end of
+    /// that part's own last visible motion ([`CUE_STILL`]), when it is
+    /// still to come (after [`Platform::second`]). `None` when no part
+    /// carries the walker or the carrying part stands from now on, whatever
+    /// the other parts still do.
     pub carried_until: Option<f64>,
+    /// Whether the part carrying the walker moves visibly at
+    /// [`Platform::second`] ([`CUE_STILL`]). `false` when no part carries
+    /// the walker.
+    pub carried_moving: bool,
+    /// When the part carrying the walker stands at [`Platform::second`] and
+    /// moves visibly later under a started sequence: the second that motion
+    /// begins (a sequence that holds the part still at its start, then
+    /// moves it). `None` otherwise.
+    pub carried_starts: Option<f64>,
     /// The second the run last started a sequence on it, if it did.
     pub started: Option<f64>,
     /// Whether the run started that sequence at or after an activation of
@@ -1273,31 +1363,29 @@ impl Elevator {
                 carries: ground == Some(self.key(1 + gi as u32)),
             });
         }
-        // The last key of every part's and group's track: still to come,
-        // the platform moves until then.
-        // The last key at which each part's or group's motion changes:
-        // still to come, the platform moves until then (a sequence's tail
-        // that holds one pose is standing, not moving).
-        let part_ends: Vec<Option<f64>> =
-            self.parts.iter().map(|p| last_change(&p.track)).collect();
-        let group_ends: Vec<Option<f64>> = self
-            .groups
+        // What the status line's cue reads of each part's and group's own
+        // motion at `t` (viewer policy, [`CUE_STILL`]): moving now, the
+        // start of its next visible motion, the end of its last one.
+        let cues: Vec<(bool, Option<f64>, Option<f64>)> = self
+            .parts
             .iter()
-            .map(|g| last_translation_change(&self.group_track(g)))
+            .map(|p| motion_cue_at(&p.track, p.base.bounds.map(|b| (b.min, b.max)), t))
+            .chain(
+                self.groups
+                    .iter()
+                    .map(|g| translation_cue_at(&self.group_track(g), t)),
+            )
             .collect();
         let latest = |e: &mut dyn Iterator<Item = f64>| {
             e.fold(None, |m: Option<f64>, e| {
                 Some(m.map_or(e, |m: f64| m.max(e)))
             })
         };
-        let moves_until = latest(&mut part_ends.iter().chain(&group_ends).flatten().copied());
-        let carried_until = latest(
-            &mut parts
-                .iter()
-                .zip(part_ends.iter().chain(&group_ends))
-                .filter(|(m, _)| m.carries)
-                .filter_map(|(_, e)| *e),
-        );
+        let moves_until = latest(&mut cues.iter().filter_map(|c| c.2));
+        // `parts` lists the rigid parts, then the groups, as `cues` does.
+        let carrier = parts.iter().position(|m| m.carries).map(|i| cues[i]);
+        let (carried_moving, carried_starts, carried_until) =
+            carrier.unwrap_or((false, None, None));
         Platform {
             reference: self.reference.clone(),
             space: self.space.clone(),
@@ -1305,8 +1393,10 @@ impl Elevator {
             set: self.set.clone(),
             second: t,
             parts,
-            moves_until: moves_until.filter(|e| *e > t),
-            carried_until: carried_until.filter(|e| *e > t),
+            moves_until,
+            carried_until,
+            carried_moving,
+            carried_starts,
             started: self.started_at,
             after_activation: false,
         }
@@ -2188,6 +2278,87 @@ mod tests {
         assert_eq!(p.moves_until, Some(3.5));
         // Not carried: no part's own end counts.
         assert_eq!(e.platform().carried_until, None);
+    }
+
+    /// The cue reads a part's own visible motion: a held pose whose keys
+    /// repeat with a thousandth of a unit of noise stands, and the second
+    /// the part sets off is known before it does.
+    #[test]
+    fn a_deck_held_with_noise_stands_until_it_sets_off() {
+        let m = |z: f64| Motion::translation([0.0, 0.0, z]);
+        // Two seconds held with noise, one second down 100 units, held.
+        let track: MotionTrack = (0..=240)
+            .map(|k| {
+                let f = k as f64 / 60.0;
+                let z = if f < 2.0 {
+                    0.001 * f64::from(k % 2)
+                } else {
+                    -100.0 * (f - 2.0).min(1.0)
+                };
+                (f, m(z))
+            })
+            .collect();
+        let bounds = Some(([-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]));
+        let (moving, starts, ends) = motion_cue_at(&track, bounds, 1.0);
+        assert!(!moving);
+        assert!(starts.is_some_and(|s| (s - 2.0).abs() < 0.02), "{starts:?}");
+        assert!(ends.is_some_and(|e| (e - 3.0).abs() < 0.02), "{ends:?}");
+        let (moving, starts, _) = motion_cue_at(&track, bounds, 2.5);
+        assert!(moving && starts.is_none());
+        assert_eq!(motion_cue_at(&track, bounds, 3.5), (false, None, None));
+        // The strict reading takes the noise for motion.
+        assert!(last_change(&track[..120]).is_some());
+        assert_eq!(
+            motion_cue_at(&track[..120], bounds, 0.5),
+            (false, None, None)
+        );
+        // On the walker's ground: the platform says the deck stands and when
+        // it starts.
+        let mut lib = fo4_vm::MapLibrary::default();
+        let mut host = fo4_vm::NoHost;
+        let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+        let o = vm.world.object(
+            "the platform",
+            Some(fo4_vm::bind::record_key(&key(5))),
+            &["objectreference"],
+        );
+        let mut e = rigid_elevator();
+        e.parts[0].tracks.insert("Hold".into(), track);
+        let mut set: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut set, 0.0).unwrap();
+        let mut c =
+            Character::new(Params::PROVISIONAL, Settings::DEFAULT, [0.0, 0.0, 5.0]).unwrap();
+        c.settle(&set, 600);
+        vm.world.anims.started.push((10.0, o, "Hold".into()));
+        assert!(e.follow(&vm));
+        let tick = Settings::DEFAULT.tick;
+        let mut t = 10.0;
+        let ground = |set: &WorldSet<Key>, c: &Character| {
+            c.ground
+                .filter(|_| c.grounded)
+                .and_then(|g| set.source(g.source))
+                .map(|(k, _)| *k)
+        };
+        while t < 11.0 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        let p = e.platform_carrying(ground(&set, &c));
+        assert!(p.parts[0].carries);
+        assert!(!p.carried_moving);
+        assert!(p.carried_starts.is_some_and(|s| (s - 12.0).abs() < 0.02));
+        assert!(p.carried_until.is_some_and(|e| (e - 13.0).abs() < 0.02));
+        while t < 12.5 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        let p = e.platform_carrying(ground(&set, &c));
+        assert!(p.parts[0].carries && p.carried_moving && p.carried_starts.is_none());
+        // Not carried: nothing of the part's own motion is read.
+        let q = e.platform();
+        assert!(!q.carried_moving && q.carried_starts.is_none() && q.carried_until.is_none());
     }
 
     #[test]

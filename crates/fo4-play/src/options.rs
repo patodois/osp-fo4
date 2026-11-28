@@ -136,6 +136,11 @@ pub struct Play {
     /// stretch of ticks the walker was blocked, with what blocked it, in
     /// `play.txt`.
     pub report_walls: bool,
+    /// `--play-report-platforms` (a report of the play mode, no rule): each
+    /// change of what the named platforms' parts do under the walker (the
+    /// part carrying it, whether that part moves, when it starts and stops,
+    /// in `play.txt`).
+    pub report_platforms: bool,
     /// `--play-action-after-offset` (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
     /// the run's `--action-after-offset`, and each timed open or
@@ -223,6 +228,7 @@ impl Play {
             "--play-pick-first-met" => &mut self.first_met,
             "--play-pick-actors" => &mut self.pick_actors,
             "--play-report-walls" => &mut self.report_walls,
+            "--play-report-platforms" => &mut self.report_platforms,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
@@ -592,6 +598,7 @@ impl Play {
         opts.first_met = self.first_met;
         opts.pick_actors = self.pick_actors;
         opts.report_walls = self.report_walls;
+        opts.report_platforms = self.report_platforms;
         opts
     }
 
@@ -866,10 +873,11 @@ mod tests {
     #[test]
     fn the_door_and_wall_options_read_and_go_together() {
         let p = read(
-            "--play-live-world --play-held-doors --play-held-doors-at-load --play-report-walls",
+            "--play-live-world --play-held-doors --play-held-doors-at-load --play-report-walls --play-report-platforms",
         )
         .unwrap();
         assert!(p.held_doors && p.held_at_load && p.report_walls);
+        assert!(p.walker_options().report_platforms);
         assert!(p.world_options().held_at_load && p.walker_options().held_at_load);
         assert!(p.walker_options().report_walls);
         assert!(!p.world_options().door_open && !p.walker_options().door_open);
