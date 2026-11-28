@@ -46,6 +46,7 @@ rule a preset comment names that the table lacks, or a rule here that is not pen
 | `--play-collision-persistent` | `play_world_persistent_refs_walk_in_square_v1` | pending | The placed references (REFR, not actors) of a worldspace's cells' persistent groups whose stored position lies in a ... |
 | `--play-light-movables` | `play_light_movable_static_passed_v1` | pending | A placed reference whose base is a movable static (MSTT) and whose object bounds times its scale are at most 64 units along each axis (an assumed limit in place of a mass this project does not read) has no collision ... |
 | `--play-step-lookahead` | `walk_step_lookahead_unless_climbed_v1` | pending | The walker's step-up takes its retry with the tick's own move only when that retry ends higher than the start or makes the whole move; otherwise it first tries ... |
+| `--play-land-edge` | `play_walk_held_at_land_edge_v1` | pending | In a worldspace, a walker tick that would take the feet from a grid square whose terrain the walking world loaded into one whose terrain it did not (no cell, no LAND, a refused terrain) is not taken: the walker stands, held ... |
 | `--play-pick-first-met` | `play_activate_ray_first_met_v1` | pending | The activation's ray (play_activate_collision_ray_v1, with play_activate_object_bounds_v1) orders what it meets by whether the eye stands inside it, ... |
 | `--play-action-after-offset` | `caller_action_after_keeps_offset_v1` | pending | A caller's timed action held until a stage (--action-after) keeps its offset from that stage: when the stage is done, each action the gate holds ... |
 | `--play-action-after-offset` | `play_activate_written_second_v1` | pending | The walker's activation or open of a reference whose caller's timed activation or open the play mode leaves out (--play-activate-person, ... |
@@ -123,8 +124,9 @@ times the rule's placeholder), a choice for playing, not a measurement.
 The preset's other switches belong to no rule of their own: they choose what the window loads and how the play
 mode runs (viewer or play-mode policy, the caller's values): `--walk`, `--terrain`, `--around`, `--no-stream`,
 `--play-keys`, `--play-stand`, `--play-reach`, `--play-follow-grid`, `--play-slice`, `--play-held-cue` (the status
-line's "blocked" after a second held against a shape, "low obstacle" when its top is at most 48 units above the
-feet, kept 2 s after the key is let go: a viewer aid), and `--timeline-cast` (the
+line's "blocked" after half a second held against a shape, "low obstacle" when its top is at most 48 units above
+the feet, "no ground beyond" at the land's edge of `--play-land-edge`, kept up to 8 s after the key is let go while
+the walker stands there, on a row of its own below the objective: a viewer aid), and `--timeline-cast` (the
 run's actors drawn as their characters; how they stand and move is the rules of the `--timeline-*` and
 `--actor-*` rows and of the hypotheses level).
 

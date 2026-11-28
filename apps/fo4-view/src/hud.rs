@@ -320,8 +320,10 @@ pub fn platform_status(
 }
 
 /// How long (seconds) the walker must be held against a blocking shape
-/// before the status line says so. Viewer policy.
-pub const HELD_SECONDS: f64 = 1.0;
+/// before the status line says so. Viewer policy: half a second since
+/// round 33 (the 31st session's person pressed 1.6 s against a pier and
+/// the walker was held for the last 0.8 s of it, too short for a second).
+pub const HELD_SECONDS: f64 = 0.5;
 /// The height above the feet (units) at or below which the top of what
 /// holds the walker is a "low obstacle": two fifths of the 120-unit eye
 /// height, about knee height. Viewer policy, nothing about the game.
@@ -336,19 +338,24 @@ pub const HELD_LOW: f64 = 48.0;
 /// the primitive it last met stands at most [`HELD_LOW`] above its feet,
 /// "blocked" otherwise (or when the top is not known); `None` before. No
 /// object is named: the cue says why the walker stands when the cause may
-/// lie below the eye's frame.
-pub fn held_status(held: Option<(f64, Option<f64>)>, t: f64) -> Option<String> {
-    let (_, top) = held.filter(|h| t - h.0 >= HELD_SECONDS)?;
+/// lie below the eye's frame. `edge` (`fo4_play::walker::Held::edge`): the
+/// walker was last held at the edge of the loaded land
+/// (`play_walk_held_at_land_edge_v1`), "blocked - no ground beyond".
+pub fn held_status(held: Option<(f64, Option<f64>, bool)>, t: f64) -> Option<String> {
+    let (_, top, edge) = held.filter(|h| t - h.0 >= HELD_SECONDS)?;
     Some(match top {
+        _ if edge => "blocked - no ground beyond".to_string(),
         Some(top) if top <= HELD_LOW => "blocked - low obstacle".to_string(),
         _ => "blocked".to_string(),
     })
 }
 
-/// How long (seconds) the held cue stays after the hold ends while the
-/// feet stay where it was shown: a person taps the key against what holds
-/// the walker and lets go. Viewer policy.
-pub const HELD_LINGER: f64 = 2.0;
+/// How long (seconds) the held cue stays at most after the hold ends while
+/// the feet stay where it was shown: a person taps the key against what
+/// holds the walker, lets go and looks. The 31st session's person looked
+/// 3.5 to 6 s after letting go and found the 2 s of round 32 gone; the cue
+/// now stays while the walker stands there, up to this. Viewer policy.
+pub const HELD_LINGER: f64 = 8.0;
 /// How far (units, across) the feet may get from where the held cue was
 /// shown for it to linger (as `fo4_play::walker::HELD_PROGRESS`).
 pub const HELD_LINGER_ACROSS: f64 = 8.0;
@@ -362,7 +369,7 @@ pub type HeldKept = (String, [f64; 3], f64);
 /// [`HELD_LINGER`] after it stops giving one while the feet stay within
 /// [`HELD_LINGER_ACROSS`] of where it was. Returns the cue and what to keep.
 pub fn held_cue(
-    held: Option<(f64, Option<f64>)>,
+    held: Option<(f64, Option<f64>, bool)>,
     feet: [f64; 3],
     t: f64,
     kept: Option<HeldKept>,
@@ -423,6 +430,12 @@ pub fn scale(height: f32) -> f32 {
     (height / 360.0).round().max(2.0)
 }
 
+/// How many one-line heights below the window's top edge the status line
+/// is centred: the objective's box spans from one to two lines below the
+/// top edge, so the status line's (one line high) spans from three to
+/// four, one line clear of it. Viewer policy.
+pub const STATUS_ROW: f32 = 3.5;
+
 /// Where a slot's quad is centred (window pixels from the centre, y up) in
 /// a window `size` with font pixels of `k`, for a one-line raster.
 #[cfg(test)]
@@ -440,7 +453,10 @@ pub fn place_sized(slot: Slot, size: [f32; 2], k: f32, raster: [u32; 2]) -> [f32
         Slot::Crosshair => [0.0, 0.0],
         Slot::Prompt => [0.0, -(2.0 * line)],
         Slot::Subtitle => [0.0, -size[1] / 2.0 + 1.5 * line + rh / 2.0],
-        Slot::Status => [0.0, size[1] / 2.0 - 2.0 * line],
+        // A row below the objective's (whose box takes the row from one
+        // line below the top edge), so a long objective never lies under
+        // it: centred [`STATUS_ROW`] lines below the top edge.
+        Slot::Status => [0.0, size[1] / 2.0 - STATUS_ROW * line],
         Slot::Objective => [
             -size[0] / 2.0 + line + rw / 2.0,
             size[1] / 2.0 - line - rh / 2.0,
@@ -539,13 +555,23 @@ mod tests {
 
     /// The 30th sessions: the walker stood against shapes below the eye's
     /// frame (a rail at the shin, a tipped panel, a bank). A synthetic hold:
-    /// nothing for the first second, then "blocked", with "low obstacle"
+    /// nothing for the first half second, then "blocked", with "low obstacle"
     /// when what holds it is no higher than the knee.
     #[test]
     fn a_walker_held_a_second_says_blocked_and_whether_low() {
-        let held = |top: Option<f64>| (10.0, top);
+        let held = |top: Option<f64>| (10.0, top, false);
         assert_eq!(held_status(None, 20.0), None);
-        assert_eq!(held_status(Some(held(Some(24.0))), 10.5), None);
+        assert_eq!(held_status(Some(held(Some(24.0))), 10.4), None);
+        // Half a second held already says so (round 33).
+        assert_eq!(
+            held_status(Some(held(Some(24.0))), 10.5).as_deref(),
+            Some("blocked - low obstacle")
+        );
+        // Held at the edge of the loaded land.
+        assert_eq!(
+            held_status(Some((10.0, None, true)), 10.6).as_deref(),
+            Some("blocked - no ground beyond")
+        );
         assert_eq!(
             held_status(Some(held(Some(24.0))), 11.0).as_deref(),
             Some("blocked - low obstacle")
@@ -565,18 +591,49 @@ mod tests {
     }
 
     /// Replayed, the 30th session's A tapped the key a second against the
-    /// panel at the control stairs and let go as the cue came: it stays two
-    /// seconds while the feet stay, and goes when the walker moves away.
+    /// panel at the control stairs and let go as the cue came; the 31st's
+    /// person looked 3.5 to 6 s after letting go: the cue stays while the
+    /// feet stay, up to eight seconds, and goes when the walker moves away.
     #[test]
     fn the_held_cue_lingers_after_the_key_is_let_go_while_the_feet_stay() {
         let feet = [0.0, 0.0, 0.0];
-        let (cue, kept) = held_cue(Some((10.0, Some(30.0))), feet, 11.0, None);
+        let (cue, kept) = held_cue(Some((10.0, Some(30.0), false)), feet, 11.0, None);
         assert_eq!(cue.as_deref(), Some("blocked - low obstacle"));
         let (cue, kept2) = held_cue(None, [3.0, 0.0, 0.0], 12.5, kept.clone());
         assert_eq!(cue.as_deref(), Some("blocked - low obstacle"));
-        assert_eq!(held_cue(None, feet, 13.1, kept2), (None, None));
+        // Six seconds after the key was let go, the walker still there.
+        let (cue, kept3) = held_cue(None, feet, 17.0, kept2);
+        assert_eq!(cue.as_deref(), Some("blocked - low obstacle"));
+        assert_eq!(held_cue(None, feet, 19.1, kept3), (None, None));
         assert_eq!(held_cue(None, [20.0, 0.0, 0.0], 11.5, kept), (None, None));
         assert_eq!(held_cue(None, feet, 11.5, None), (None, None));
+    }
+
+    /// The 31st session's long objective ran under the status line's place
+    /// at the top centre: the status line now has a row of its own below
+    /// the objective's, at every window size.
+    #[test]
+    fn the_status_line_lies_below_a_long_objective() {
+        let one = (HEIGHT + 2 * MARGIN) as u32;
+        for size in [
+            [1280.0, 720.0],
+            [1920.0, 1080.0],
+            [2560.0, 1440.0],
+            [800.0, 600.0],
+        ] {
+            let k = scale(size[1]);
+            let line = one as f32 * k;
+            let n = columns(size[0], k) as u32;
+            let wide = n * (WIDTH + GAP) as u32 + 2 * MARGIN as u32;
+            let o = place_sized(Slot::Objective, size, k, [wide, one]);
+            let s = place_sized(Slot::Status, size, k, [40, one]);
+            // The objective's bottom edge above the status line's top edge.
+            let objective_bottom = o[1] - line / 2.0;
+            let status_top = s[1] + line / 2.0;
+            assert!(objective_bottom > status_top, "{size:?} {o:?} {s:?}");
+            // Still near the top.
+            assert!(s[1] > size[1] / 2.0 - 5.0 * line, "{size:?}");
+        }
     }
 
     #[test]

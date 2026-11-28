@@ -222,6 +222,10 @@ pub struct Options {
     /// Keep the walker's hold against a blocking shape ([`Held`],
     /// [`Walker::held`]; `--play-held-cue`, a viewer aid).
     pub held_cue: bool,
+    /// `play_walk_held_at_land_edge_v1` (`--play-land-edge`): in a
+    /// worldspace, a tick that would take the feet from a grid square with
+    /// loaded terrain into one without it is not taken.
+    pub land_edge: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -250,6 +254,7 @@ impl Default for Options {
             report_walls: false,
             report_platforms: false,
             held_cue: false,
+            land_edge: false,
         }
     }
 }
@@ -300,6 +305,17 @@ pub struct Held {
     /// How far the top of the box of the primitive the walker last met
     /// while blocked stands above the feet (units); `None` when not known.
     pub top: Option<f64>,
+    /// The last blocked tick was held at the edge of the loaded land
+    /// (`play_walk_held_at_land_edge_v1`), not by a shape.
+    pub edge: bool,
+}
+
+/// Whether a tick from `from` to `to` leaves the loaded land: `from`'s
+/// grid square has loaded terrain and `to`'s has none
+/// (`play_walk_held_at_land_edge_v1`).
+pub fn off_land(land: &std::collections::BTreeSet<[i32; 2]>, from: [f64; 3], to: [f64; 3]) -> bool {
+    let (a, b) = (crate::world::square(from), crate::world::square(to));
+    a != b && land.contains(&a) && !land.contains(&b)
 }
 
 /// The hold after one tick ([`Held`]): `keys`, whether a direction key is
@@ -308,7 +324,7 @@ pub struct Held {
 /// blocked. No key ends a hold; feet further than [`HELD_PROGRESS`] across
 /// from its start end it (a blocked tick then starts another); otherwise a
 /// hold goes on through ticks that are not blocked (a wedged walker's
-/// step-up tries).
+/// step-up tries). `edge`: the tick was held at the land's edge.
 pub fn next_held(
     prev: Option<Held>,
     t: f64,
@@ -316,6 +332,7 @@ pub fn next_held(
     blocked: bool,
     feet: [f64; 3],
     top: Option<f64>,
+    edge: bool,
 ) -> Option<Held> {
     if !keys {
         return None;
@@ -324,12 +341,14 @@ pub fn next_held(
     match prev {
         Some(h) if across(h.at) <= HELD_PROGRESS => Some(Held {
             top: if blocked { top.or(h.top) } else { h.top },
+            edge: if blocked { edge } else { h.edge },
             ..h
         }),
         _ => blocked.then_some(Held {
             since: t,
             at: feet,
             top,
+            edge,
         }),
     }
 }
@@ -357,6 +376,8 @@ pub struct Log {
     pub track: Vec<Point>,
     /// Ticks the walker was blocked by a wall or climbed a step.
     pub blocked: u64,
+    /// Ticks undone at the land's edge (`play_walk_held_at_land_edge_v1`).
+    pub land_edge: u64,
     pub stepped: u64,
     /// Ticks the walker ended in the air.
     pub airborne: u64,
@@ -772,6 +793,9 @@ pub struct Walker {
     platforms_logged: Vec<String>,
     /// `--play-held-cue`: the walker's hold now ([`Held`]).
     held: Option<Held>,
+    /// The grid squares of the walking world whose terrain is loaded
+    /// (`crate::world::Built::land`), for `--play-land-edge`.
+    land: Option<std::collections::BTreeSet<[i32; 2]>>,
     /// The doors the person's activation opened since the log last read
     /// the boxes (`--play-door-toggle`).
     toggled_open: std::collections::BTreeSet<FormKey>,
@@ -895,6 +919,7 @@ impl Walker {
             held_logged: Default::default(),
             platforms_logged: Vec::new(),
             held: None,
+            land: None,
             toggled_open: Default::default(),
             nowait: false,
             doors: None,
@@ -1025,6 +1050,13 @@ impl Walker {
     /// (`play_load_door_activation_v1`).
     pub fn with_doors(mut self, doors: Doors) -> Walker {
         self.doors = Some(doors);
+        self
+    }
+
+    /// The grid squares of the first walking world whose terrain is loaded
+    /// (`crate::world::Built::land`; read under `--play-land-edge`).
+    pub fn with_land(mut self, land: Option<std::collections::BTreeSet<[i32; 2]>>) -> Walker {
+        self.land = land;
         self
     }
 
@@ -2061,17 +2093,35 @@ impl Walker {
                 .map_err(|e| e.to_string())?;
         }
         c.settings.tick = dt;
+        let before = (c.feet, c.velocity, c.grounded, c.ground);
         let started = std::time::Instant::now();
-        let s = c.tick(self.live.space(), self.controls.walker());
+        let mut s = c.tick(self.live.space(), self.controls.walker());
         let took = started.elapsed().as_secs_f64();
         c.settings.tick = tick;
+        // `play_walk_held_at_land_edge_v1`: a tick into a square of the
+        // follow grid without loaded terrain, from one with it, is undone.
+        let edge = self.opts.land_edge
+            && self
+                .land
+                .as_ref()
+                .is_some_and(|l| off_land(l, before.0, s.feet));
+        if edge {
+            (c.feet, c.velocity, c.grounded, c.ground) = before;
+            s.feet = before.0;
+            s.velocity = before.1;
+            s.grounded = before.2;
+            s.ground = before.3;
+            s.blocked = keys;
+            s.wall = None;
+            self.log.borrow_mut().land_edge += 1;
+        }
         if self.opts.held_cue {
             let top = s
                 .wall
                 .filter(|_| s.blocked)
                 .and_then(|w| self.live.space().entry_bounds(w.entry))
                 .map(|b| b.max[2] - s.feet[2]);
-            self.held = next_held(self.held, to, keys, s.blocked, s.feet, top);
+            self.held = next_held(self.held, to, keys, s.blocked, s.feet, top, edge);
         }
         {
             let mut log = self.log.borrow_mut();
@@ -2437,6 +2487,7 @@ impl Walker {
             .borrow_mut()
             .light_passed
             .extend(built.light_passed.iter().cloned());
+        self.land = built.land.clone();
         let stats = self.live.stats.clone();
         self.live = match built.live.take() {
             Some((dormant, info)) => Live::new(
@@ -2854,6 +2905,8 @@ mod tests {
         waits: Rc<RefCell<u64>>,
         /// Platforms handed over before a wait.
         platforms: Rc<RefCell<u64>>,
+        /// The holds handed over before a wait, with the window's clock.
+        held: Rc<RefCell<Vec<(f64, Option<Held>)>>>,
     }
 
     impl Arrivals for Window {
@@ -2884,6 +2937,10 @@ mod tests {
 
         fn platforms(&mut self, _: Vec<crate::elevator::Platform>) {
             *self.platforms.borrow_mut() += 1;
+        }
+
+        fn held(&mut self, held: Option<Held>) {
+            self.held.borrow_mut().push((self.clock, held));
         }
     }
 
@@ -2958,6 +3015,7 @@ mod tests {
             written: written.clone(),
             waits: waits.clone(),
             platforms: handed.clone(),
+            held: Rc::new(RefCell::new(Vec::new())),
         };
         let mut live = Walker::new(floor(), refs.clone(), Script::default(), opts)
             .unwrap()
@@ -3375,28 +3433,187 @@ mod tests {
         let script = Script::parse("1 activate\n").unwrap();
         assert!(Walker::new(floor(), vec![], script, Options::default()).is_err());
     }
+    /// The person's path, not a record: keys that arrive from a window
+    /// (frames of uneven length, the forward key held five seconds against
+    /// a wall) hand the window a hold through `Arrivals::held` that began
+    /// where the walker met the wall and lasts while the key is held, so
+    /// the status line can say "blocked" (the 31st session's question:
+    /// does the live window get the hold a replay gets?).
+    #[test]
+    fn keys_that_arrive_hand_the_window_the_hold_against_a_wall() {
+        use crate::input::Key;
+        let b = Budget::new(1 << 24);
+        let mut world = floor();
+        let (x, lo, hi) = (200.0, -500.0, 500.0);
+        world
+            .add_triangles(
+                &[
+                    [[x, lo, 0.0], [x, hi, 0.0], [x, hi, 400.0]],
+                    [[x, lo, 0.0], [x, hi, 400.0], [x, lo, 400.0]],
+                ],
+                "wall",
+                &b,
+            )
+            .unwrap();
+        world.rebuild(256.0, &b).unwrap();
+        let mut plan = Vec::new();
+        for n in 0..900_u32 {
+            let dt = if n % 3 == 0 { 0.009 } else { 0.019 };
+            let c = match n {
+                2 => vec![Command::Face(0.0)],
+                10 => vec![Command::Key(Key::Forward, true)],
+                // About five seconds later.
+                350 => vec![Command::Key(Key::Forward, false)],
+                400 => vec![Command::End],
+                _ => Vec::new(),
+            };
+            plan.push((dt, c));
+        }
+        let handed = Rc::new(RefCell::new(Vec::new()));
+        let window = Window {
+            plan,
+            frame: 0,
+            clock: 0.0,
+            written: Rc::new(RefCell::new(String::new())),
+            waits: Rc::new(RefCell::new(0)),
+            platforms: Rc::new(RefCell::new(0)),
+            held: handed.clone(),
+        };
+        let opts = Options {
+            stand: Some(0.1),
+            held_cue: true,
+            ..Options::default()
+        };
+        let mut live = Walker::new(world, vec![None, None], Script::default(), opts)
+            .unwrap()
+            .with_arrivals(Box::new(window))
+            .unwrap();
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [0.0, 0.0, 5.0],
+            facing: None,
+        };
+        slices(&mut live, &start);
+        let handed = handed.borrow();
+        let holds: Vec<(f64, Held)> = handed
+            .iter()
+            .filter_map(|(t, h)| h.map(|h| (*t, h)))
+            .collect();
+        assert!(!holds.is_empty());
+        // One hold, begun where the walker met the wall, handed on for
+        // more than three seconds of the window's clock.
+        let since = holds[0].1.since;
+        assert!(holds.iter().all(|(_, h)| h.since == since), "{holds:?}");
+        assert!(holds[0].1.at[0] > 150.0 && holds[0].1.at[0] < 200.0);
+        let last = holds.last().unwrap().0;
+        assert!(last - since > 3.0, "{since} {last}");
+        // Let go: the hold ends (the window's linger takes over).
+        assert!(handed.last().is_some_and(|(_, h)| h.is_none()));
+    }
+
+    /// A synthetic grid: ground over two squares, terrain loaded only in
+    /// the first (the second has no LAND, as the 31st session's B found
+    /// past the prewar town's edge). With `--play-land-edge` the walker
+    /// stops at the square's edge, held, the hold marked as the land's
+    /// edge; without it the walker walks on into the second square.
+    #[test]
+    fn the_walker_is_held_at_the_edge_of_the_loaded_land() {
+        let b = Budget::new(1 << 24);
+        let ground = || {
+            let mut w = World::new();
+            let (lo, hi) = (100.0, 8000.0);
+            w.add_triangles(
+                &[
+                    [[lo, lo, 0.0], [hi, lo, 0.0], [hi, hi, 0.0]],
+                    [[lo, lo, 0.0], [hi, hi, 0.0], [lo, hi, 0.0]],
+                ],
+                "ground",
+                &b,
+            )
+            .unwrap();
+            w.rebuild(256.0, &b).unwrap();
+            w
+        };
+        let land: std::collections::BTreeSet<[i32; 2]> = [[0, 0]].into_iter().collect();
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [3900.0, 1000.0, 5.0],
+            facing: None,
+        };
+        let text = "0 face 0\n0.5 forward on\n6 forward off\n7 end\n";
+        let run = |edge: bool| {
+            let opts = Options {
+                land_edge: edge,
+                held_cue: true,
+                ..Options::default()
+            };
+            let mut w = Walker::new(ground(), vec![None], Script::parse(text).unwrap(), opts)
+                .unwrap()
+                .with_land(Some(land.clone()));
+            let mut held = Vec::new();
+            let mut now = 0.0;
+            loop {
+                match w.step(now, Some(&start)).unwrap() {
+                    Next::Slice(s) => {
+                        now = s.until;
+                        held.push(w.held());
+                    }
+                    Next::Finish => break,
+                    Next::Stop => panic!("stopped"),
+                }
+            }
+            let last = w.log.borrow().track.last().cloned().unwrap();
+            let undone = w.log.borrow().land_edge;
+            (last.pos, undone, held)
+        };
+        let (on, undone, held) = run(true);
+        assert!(on[0] < 4096.0 && on[0] > 4000.0, "{on:?}");
+        assert!(undone > 10);
+        assert!(held.iter().flatten().any(|h| h.edge && h.since < 3.0));
+        let (off, none, _) = run(false);
+        assert!(off[0] > 4300.0, "{off:?}");
+        assert_eq!(none, 0);
+        // The square test alone.
+        assert!(off_land(&land, [4095.0, 0.0, 0.0], [4097.0, 0.0, 0.0]));
+        assert!(!off_land(&land, [4000.0, 0.0, 0.0], [4090.0, 0.0, 0.0]));
+        assert!(!off_land(&land, [4097.0, 0.0, 0.0], [4200.0, 0.0, 0.0]));
+    }
+
     /// The hold the window's status line reads: it begins at a blocked
     /// tick, goes on while the feet stay put (blocked or not), ends with
     /// progress or with the keys let go.
     #[test]
     fn a_hold_begins_blocked_and_ends_with_progress_or_no_key() {
         let f = |x: f64| [x, 0.0, 0.0];
-        assert_eq!(next_held(None, 1.0, true, false, f(0.0), None), None);
-        let h = next_held(None, 1.0, true, true, f(0.0), Some(30.0)).unwrap();
+        assert_eq!(next_held(None, 1.0, true, false, f(0.0), None, false), None);
+        let h = next_held(None, 1.0, true, true, f(0.0), Some(30.0), false).unwrap();
         assert_eq!((h.since, h.top), (1.0, Some(30.0)));
         // Wedged: unblocked step-up tries and a few units of jitter keep it.
-        let h2 = next_held(Some(h), 1.5, true, false, f(3.0), None).unwrap();
+        let h2 = next_held(Some(h), 1.5, true, false, f(3.0), None, false).unwrap();
         assert_eq!((h2.since, h2.top), (1.0, Some(30.0)));
-        let h3 = next_held(Some(h2), 2.0, true, true, f(-2.0), Some(70.0)).unwrap();
+        let h3 = next_held(Some(h2), 2.0, true, true, f(-2.0), Some(70.0), false).unwrap();
         assert_eq!((h3.since, h3.top), (1.0, Some(70.0)));
         // Progress ends it; blocked again further on starts another.
         assert_eq!(
-            next_held(Some(h3), 2.1, true, false, f(HELD_PROGRESS + 1.0), None),
+            next_held(
+                Some(h3),
+                2.1,
+                true,
+                false,
+                f(HELD_PROGRESS + 1.0),
+                None,
+                false
+            ),
             None
         );
-        let h4 = next_held(Some(h3), 2.1, true, true, f(20.0), None).unwrap();
+        let h4 = next_held(Some(h3), 2.1, true, true, f(20.0), None, false).unwrap();
         assert_eq!(h4.since, 2.1);
         // No key: no hold.
-        assert_eq!(next_held(Some(h3), 2.2, false, true, f(0.0), None), None);
+        assert_eq!(
+            next_held(Some(h3), 2.2, false, true, f(0.0), None, false),
+            None
+        );
     }
 }

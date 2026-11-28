@@ -2108,7 +2108,7 @@ fn hud_update(
     let platform = match seen.feet {
         Some(feet) => {
             let (cue, keep) = crate::hud::held_cue(
-                seen.held.map(|h| (h.since, h.top)),
+                seen.held.map(|h| (h.since, h.top, h.edge)),
                 feet,
                 seen.t,
                 held_kept.take(),

@@ -147,6 +147,10 @@ pub struct Play {
     /// against a blocking shape for the window's status line
     /// ([`walker::Held`]).
     pub held_cue: bool,
+    /// `--play-land-edge` (`play_walk_held_at_land_edge_v1`): in a
+    /// worldspace the walker does not step from a grid square with loaded
+    /// terrain into one of the follow grid without it.
+    pub land_edge: bool,
     /// `--play-action-after-offset` (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
     /// the run's `--action-after-offset`, and each timed open or
@@ -237,6 +241,7 @@ impl Play {
             "--play-report-walls" => &mut self.report_walls,
             "--play-report-platforms" => &mut self.report_platforms,
             "--play-held-cue" => &mut self.held_cue,
+            "--play-land-edge" => &mut self.land_edge,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
@@ -610,6 +615,7 @@ impl Play {
         opts.report_walls = self.report_walls;
         opts.report_platforms = self.report_platforms;
         opts.held_cue = self.held_cue;
+        opts.land_edge = self.land_edge;
         opts
     }
 
@@ -664,6 +670,7 @@ impl Play {
             open_pose,
             stored_open,
             light_passed,
+            land,
         } = built;
         let _ = writeln!(
             report,
@@ -691,6 +698,9 @@ impl Play {
         }
         if self.light_movables {
             let _ = writeln!(report, "switch: a placed movable static whose object bounds are at most {} units along every axis has no collision in the walking world; it stays drawn (--play-light-movables, {})", crate::world::LIGHT_MOVABLE_MAX, crate::rules::LIGHT_MOVABLE_PASSED);
+        }
+        if self.land_edge {
+            let _ = writeln!(report, "switch: in a worldspace the walker does not step from a grid square whose terrain the walking world loaded into one of the follow grid without it; it stands, held (--play-land-edge, {})", crate::rules::LAND_EDGE);
         }
         if self.step_lookahead {
             let _ = writeln!(report, "switch: the walker's step-up tries the retries one radius, half and a quarter of a radius ahead before it takes a retry with the tick's own move that does not climb (--play-step-lookahead, {})", fo4_walk::rules::STEP_LOOKAHEAD);
@@ -767,6 +777,7 @@ impl Play {
             }
             None => walker::Walker::new(world, refs, script, opts)?,
         };
+        w = w.with_land(land);
         if self.load_doors {
             let _ = writeln!(report, "switch: the activation crosses load doors (--play-load-doors): {} among the loaded references", doors.len());
             w = w.with_doors(walker::Doors { doors, around });

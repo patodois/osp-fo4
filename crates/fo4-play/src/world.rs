@@ -343,6 +343,11 @@ pub struct Built {
     /// With [`Options::light_movables`]: the light movable statics whose
     /// collision the build left out (`play_light_movable_static_passed_v1`).
     pub light_passed: std::collections::BTreeSet<FormKey>,
+    /// The grid squares of an exterior build whose terrain was built (the
+    /// cell's and its searched neighbours'), for the walker's hold at the
+    /// land's edge (`play_walk_held_at_land_edge_v1`); `None` when the
+    /// neighbours were not searched (an interior cell, no grid).
+    pub land: Option<std::collections::BTreeSet<[i32; 2]>>,
 }
 
 /// Whether the placed reference `key` stores an `ONAM` subrecord (the
@@ -669,6 +674,7 @@ pub fn build(
         None => fo4_walk::terrain::load_around(store, &scene.cell.key, level, true, &budget)?,
     };
     ground.add_to(&mut world, &budget)?;
+    let land = land_squares(&ground);
     // Terrain sources come after the cell's: no reference.
     let mut refs = refs_before;
     refs.resize(world.sources.len(), None);
@@ -1015,6 +1021,22 @@ pub fn build(
         open_pose,
         stored_open,
         light_passed,
+        land,
+    })
+}
+
+/// The grid squares whose terrain a build loaded ([`Built::land`]):
+/// `None` unless the neighbours were searched.
+pub fn land_squares(
+    ground: &fo4_walk::terrain::TerrainSet,
+) -> Option<std::collections::BTreeSet<[i32; 2]>> {
+    ground.neighbours_searched.then(|| {
+        ground
+            .pieces
+            .iter()
+            .filter(|p| p.outcome.starts_with("built:"))
+            .filter_map(|p| p.grid)
+            .collect()
     })
 }
 

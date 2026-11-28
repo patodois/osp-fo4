@@ -243,8 +243,13 @@ pub mod rules {
     /// the walking world: the walker passes it, and it stays drawn
     /// (`--play-light-movables`).
     pub const LIGHT_MOVABLE_PASSED: &str = "play_light_movable_static_passed_v1";
+    /// In a worldspace, a tick that would take the walker's feet from a
+    /// grid square whose terrain the walking world loaded into one of the
+    /// follow grid whose terrain it did not (no cell, no LAND, a refused
+    /// terrain) is not taken: the walker stands, held (`--play-land-edge`).
+    pub const LAND_EDGE: &str = "play_walk_held_at_land_edge_v1";
     /// Every rule above.
-    pub const ALL: [&str; 36] = [
+    pub const ALL: [&str; 37] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -281,6 +286,7 @@ pub mod rules {
         DOOR_STORED_OPEN,
         WORLD_PERSISTENT_COLLISION,
         LIGHT_MOVABLE_PASSED,
+        LAND_EDGE,
     ];
 }
 

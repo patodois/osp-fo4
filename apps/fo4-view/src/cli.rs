@@ -2068,6 +2068,8 @@ mod tests {
         );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         assert!(scene.drawing.cast_on_platforms && scene.drawing.cast_keeps_part);
+        // Round 33: the hold at the land's edge.
+        assert!(p.switches.land_edge && p.switches.held_cue);
         assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots
             && a.look.head_race_fill
             && a.look.unread_slots
